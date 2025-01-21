@@ -6,8 +6,20 @@
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+
+const double pi = 3.14159265358979323846;
+
+inline float deg_to_radians(float deg)
+{
+	return deg * (pi / 180);
+}
 
 unsigned int VBO;
+int model_location;
 
 void create_vertex_buffer()
 {
@@ -118,6 +130,8 @@ void compile_shaders()
 		return;
 	}
 
+	model_location = glGetUniformLocation(shader_program, "model");
+	
 	glValidateProgram(shader_program);
 	glGetProgramiv(shader_program, GL_VALIDATE_STATUS, &success);
 	if (!success)
@@ -126,6 +140,7 @@ void compile_shaders()
 		std::cerr << "IVALID shader program: " << info_log << "\n";
 		return;
 	}
+
 
 	glUseProgram(shader_program);
 }
@@ -136,7 +151,6 @@ int main() {
 	{
 		std::cerr << "glfw not initialized\n";
 		return 1;
-
 	}
 	
 	int width = 1600;
@@ -156,10 +170,40 @@ int main() {
 	create_vertex_buffer();
 	compile_shaders();
 
+	float scale = 0.0f;
+	float delta = 0.0065f;
+	float angle = 0.0f;
+	float angle_delta = 1.0f;
+
+	glm::mat4 identity(1.0f);
+
 	while(!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
+
+		scale += delta;
+		if(std::abs(scale) >= 1.0f)
+		{
+			//delta *= -1.0f;
+		}
+		glm::mat4 translation = glm::translate(identity, glm::vec3(0.5f , 0.0f, 0.0f));
+
+
+		angle += angle_delta;
+		if(std::abs(deg_to_radians(angle)) >= deg_to_radians(90.0f))
+		{
+			//angle_delta *= -1.0f;
+		}
+
+		glm::mat4 rotation = glm::rotate(identity, deg_to_radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
+		
+		glm::mat4 scale = glm::scale(identity, glm::vec3(0.3f, 0.3f, 0.3f));
+
+		
+		glm::mat4 model = translation * rotation * scale;
+		//glm::mat4 model = scale * rotation  * translation;
+		glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
