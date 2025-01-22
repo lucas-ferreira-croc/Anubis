@@ -2,14 +2,16 @@
 #include <fstream>
 #include <string>
 
+#include "mesh/Transform.h"
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include "camera/Camera.h"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 
 const double pi = 3.14159265358979323846;
 
@@ -23,6 +25,7 @@ unsigned int IBO;
 
 int model_location;
 int projection_location;
+int view_location;
 
 struct Vertex
 {
@@ -187,6 +190,7 @@ void compile_shaders()
 	}
 
 	model_location = glGetUniformLocation(shader_program, "model");
+	view_location = glGetUniformLocation(shader_program, "view");
 	projection_location = glGetUniformLocation(shader_program, "projection");
 	
 	glValidateProgram(shader_program);
@@ -239,8 +243,11 @@ int main() {
 	glCullFace(GL_BACK);
 
 	glm::mat4 projection = glm::perspective(deg_to_radians(90.0f), (float)width / (float)height, .1f, 100.0f);
-	glm::mat4 fake_projcection(1.0f);
 
+	Transform cube_transform;
+	Camera camera;
+	glfwSetWindowUserPointer(window, &camera);
+	glfwSetKeyCallback(window, &Camera::key_callback);
 	while(!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -251,9 +258,7 @@ int main() {
 		{
 			//delta *= -1.0f;
 		}
-		//glm::mat4 translation = glm::translate(identity, glm::vec3(0.5f, 0.0f, 0.0f));
-		glm::mat4 translation = glm::translate(identity, glm::vec3(0.0f , 0.0f, -1.0f));
-
+		cube_transform.set_position(0.0f, 0.0f, 1.0f);
 
 		angle += angle_delta;
 		if(std::abs(deg_to_radians(angle)) >= deg_to_radians(90.0f))
@@ -261,14 +266,13 @@ int main() {
 			//angle_delta *= -1.0f;
 		}
 
-		glm::mat4 rotation = glm::rotate(identity, deg_to_radians(angle), glm::vec3(0.0f, 1.0f, .0f));
-		
-		glm::mat4 scale = glm::scale(identity, glm::vec3(0.3f, 0.3f, 0.3f));
+		cube_transform.set_rotation(0.0f, angle, 0.0f);
 
-		
-		glm::mat4 model = translation * rotation * scale;
-		//glm::mat4 model = scale * rotation  * translation;
-		glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(model));
+		cube_transform.set_scale(0.3f);
+		camera.update();
+
+		glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(cube_transform.get_matrix()));
+		glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(camera.get_matrix()));
 		glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
