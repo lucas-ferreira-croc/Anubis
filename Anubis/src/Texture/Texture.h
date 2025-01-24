@@ -6,18 +6,18 @@ class Texture
 {
 public:
 	Texture();
-	Texture(const char* filepath);
+	Texture(GLenum textureTarget, const char* filepath);
 	~Texture();
 
 	bool load_texture();
 	bool load_textureA();
-	void use();
+	void use(GLenum textureUnit);
 	void clear_texture();
 
 	const char* get_filepath() { return filepath; };
 	
-	static unsigned int id_counter;
-	unsigned int gl_id;
+	GLenum m_textureTarget;
+	unsigned int m_TextureObject;
 private:
 	int width, height, bit_depth;
 

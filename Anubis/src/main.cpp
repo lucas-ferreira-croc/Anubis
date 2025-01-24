@@ -14,6 +14,7 @@
 #include "mesh/Transform.h"
 #include "camera/Camera.h"
 #include "texture/Texture.h"
+#include "Mesh/Mesh.h"
 
 const double pi = 3.14159265358979323846;
 
@@ -22,77 +23,77 @@ inline float deg_to_radians(float deg)
 	return deg * (pi / 180);
 }
 
-unsigned int VBO;
-unsigned int VAO;
-unsigned int IBO;
+//unsigned int VBO;
+//unsigned int VAO;
+//unsigned int IBO;
 
 int model_location;
 int projection_location;
 int view_location;
 int texture_location;
 
-struct Vertex
-{
-	Vertex() = default;
-	Vertex(glm::vec3 position, glm::vec2 uv) : pos(position), uv(uv)
-	{
-	}
-
-	glm::vec3 pos;
-	glm::vec2 uv;
-};
-
-void create_buffers()
-{
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	glm::vec2 t00(0.0f, 0.0f); // bottom left
-	glm::vec2 t01(0.0f, 1.0f); // bottom right
-	glm::vec2 t10(1.0f, 0.0f);  // uper left
-	glm::vec2 t11(1.0f, 1.0f); // upper right
-
-	Vertex vertices[8]
-	{
-		Vertex(glm::vec3(0.5f,  0.5f,  0.5f), t00),
-		Vertex(glm::vec3(-0.5f,  0.5f, -0.5f), t01),
-		Vertex(glm::vec3(-0.5f,  0.5f,  0.5f), t10),
-		Vertex(glm::vec3(0.5f, -0.5f, -0.5f), t11),
-		Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), t00),
-		Vertex(glm::vec3(0.5f,  0.5f, -0.5f), t10),
-		Vertex(glm::vec3(0.5f, -0.5f,  0.5f), t01),
-		Vertex(glm::vec3(-0.5f, -0.5f,  0.5f), t11)
-	};
-
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float)));
-
-	unsigned int indices[] = {
-			   0, 1, 2,
-				1, 3, 4,
-				5, 6, 3,
-				7, 3, 6,
-				2, 4, 7,
-				0, 7, 6,
-				0, 5, 1,
-				1, 5, 3,
-				5, 0, 6,
-				7, 4, 3,
-				2, 1, 4,
-				0, 2, 7
-	};
-
-	glGenBuffers(1, &IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-}
+//struct Vertex
+//{
+//	Vertex() = default;
+//	Vertex(glm::vec3 position, glm::vec2 uv) : pos(position), uv(uv)
+//	{
+//	}
+//
+//	glm::vec3 pos;
+//	glm::vec2 uv;
+//};
+////
+//void create_buffers()
+//{
+//	glGenVertexArrays(1, &VAO);
+//	glBindVertexArray(VAO);
+//
+//	glm::vec2 t00(0.0f, 0.0f); // bottom left
+//	glm::vec2 t01(0.0f, 1.0f); // bottom right
+//	glm::vec2 t10(1.0f, 0.0f);  // uper left
+//	glm::vec2 t11(1.0f, 1.0f); // upper right
+//
+//	Vertex vertices[8]
+//	{
+//		Vertex(glm::vec3(0.5f,  0.5f,  0.5f), t00),
+//		Vertex(glm::vec3(-0.5f,  0.5f, -0.5f), t01),
+//		Vertex(glm::vec3(-0.5f,  0.5f,  0.5f), t10),
+//		Vertex(glm::vec3(0.5f, -0.5f, -0.5f), t11),
+//		Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), t00),
+//		Vertex(glm::vec3(0.5f,  0.5f, -0.5f), t10),
+//		Vertex(glm::vec3(0.5f, -0.5f,  0.5f), t01),
+//		Vertex(glm::vec3(-0.5f, -0.5f,  0.5f), t11)
+//	};
+//
+//	glGenBuffers(1, &VBO);
+//	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+//
+//	glEnableVertexAttribArray(0);
+//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+//
+//	glEnableVertexAttribArray(1);
+//	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float)));
+//
+//	unsigned int indices[] = {
+//			   0, 1, 2,
+//				1, 3, 4,
+//				5, 6, 3,
+//				7, 3, 6,
+//				2, 4, 7,
+//				0, 7, 6,
+//				0, 5, 1,
+//				1, 5, 3,
+//				5, 0, 6,
+//				7, 4, 3,
+//				2, 1, 4,
+//				0, 2, 7
+//	};
+//
+//	glGenBuffers(1, &IBO);
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+//}
 
 bool read_file(const char* filename, std::string& target)
 {
@@ -231,7 +232,7 @@ int main() {
 	glewInit();
 
 
-	create_buffers();
+	//create_buffers();
 	compile_shaders();
 
 	float scale = 0.0f;
@@ -262,8 +263,14 @@ int main() {
 	glfwSetCursorPosCallback(window, &Camera::cursor_position_callback);
 
 	double previous_seconds = glfwGetTime();
-	Texture texture("C:\\croc\\Anubis\\Anubis\\assets\\textures\\bad_texture.png");
-	texture.load_textureA();
+	/*Texture texture("C:\\croc\\Anubis\\Anubis\\assets\\textures\\bad_texture.png");
+	texture.load_textureA();*/
+
+	Mesh* mesh = new Mesh();
+	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\spider.obj"))
+	{
+		return 0;
+	}
 
 	while(!glfwWindowShouldClose(window))
 	{
@@ -284,6 +291,8 @@ int main() {
 		{
 			//delta *= -1.0f;
 		}
+
+		mesh->get_transform().set_position(0.0f, 0.0f, -1.0f);
 		cube_transform.set_position(0.0f, 0.0f, -1.0f);
 
 		angle += angle_delta;
@@ -292,28 +301,31 @@ int main() {
 			//angle_delta *= -1.0f;
 		}
 
+		mesh->get_transform().set_rotation(0.0f, angle, 0.0f);
 		cube_transform.set_rotation(0.0f, angle, 0.0f);
 
-		cube_transform.set_scale(0.3f);
+		mesh->get_transform().set_scale(0.3f);
+		cube_transform.set_scale(0.01f);
 		camera.update(delta_time);
-		
-		glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(cube_transform.get_matrix()));
+
+		glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(mesh->get_transform().get_matrix()));
 		glUniformMatrix4fv(view_location, 1, GL_FALSE, glm::value_ptr(camera.get_look_at()));
 		glUniformMatrix4fv(projection_location, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniform1i(texture_location, texture.gl_id);
-		glBindVertexArray(VAO);
+		glUniform1i(texture_location, 0);
+		//glBindVertexArray(VAO);
 
-		texture.use();
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		mesh->render();
+		//texture.use();
+		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
 
-	glDeleteVertexArrays(1, &VAO);
-	VAO = -1;
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &IBO);
+	//glDeleteVertexArrays(1, &VAO);
+	//VAO = -1;
+	//glDeleteBuffers(1, &VBO);
+	//glDeleteBuffers(1, &IBO);
 	glfwTerminate();
 	return 0;
 }
