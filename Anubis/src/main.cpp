@@ -17,32 +17,15 @@
 #include "Mesh/Mesh.h"
 #include "Shader/Shader.h"
 #include "Shader/Light/BaseLight.h"
+#include "Display/Display.h"
+int main() 
+{
 
-int main() {
-
-	if(!glfwInit())
-	{
-		std::cerr << "glfw not initialized\n";
-		return 1;
-	}
-	
 	int width = 1600;
 	int height = 1200;
-	GLFWwindow* window = glfwCreateWindow(width, height, "Anubis", NULL, NULL);
-	if(!window)
-	{
-		std::cerr << "could not create window";
-		glfwTerminate();
-		return 1;
-	}
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	Display display(width, height);
+	display.initialize_window();
 
-	glfwMakeContextCurrent(window);
-	glewExperimental = GL_TRUE;
-	glewInit();
 
 
 	float scale = 0.0f;
@@ -53,10 +36,6 @@ int main() {
 	glm::mat4 identity(1.0f);
 
 	//glEnable(GL_CULL_FACE);
-	glFrontFace(GL_CW);
-	glCullFace(GL_BACK);
-	glEnable(GL_DEPTH_TEST);
-
 
 	glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)width / (float)height, .1f, 100.0f);
 
@@ -66,18 +45,15 @@ int main() {
 
 	Camera camera(camera_pos, target);
 	
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetWindowUserPointer(window, &camera);
+	glfwSetInputMode(display.get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetWindowUserPointer(display.get_window(), &camera);
 	
-	glfwSetKeyCallback(window, &Camera::key_callback);
-	glfwSetCursorPosCallback(window, &Camera::cursor_position_callback);
+	glfwSetKeyCallback(display.get_window(), &Camera::key_callback);
+	glfwSetCursorPosCallback(display.get_window(), &Camera::cursor_position_callback);
 
 	double previous_seconds = glfwGetTime();
-	/*Texture texture("C:\\croc\\Anubis\\Anubis\\assets\\textures\\bad_texture.png");
-	texture.load_textureA();*/
 
 	Mesh* mesh = new Mesh();
-	//if(!mesh->load("C:\\dev\\3DRenderingOpenGL\\3DRenderOpenGLPort\\3DRenderOpenGLPort\\src\\assets\\models\\Zero.obj"))
 	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\models\\wine_barrel.obj"))
 	{
 		return 0;
@@ -88,23 +64,21 @@ int main() {
 	const char* fs_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_shader.glsl";
 	Shader shader;
 	shader.create_from_file(vs_filename, fs_filename);
-	BaseLight light(glm::vec3(1.0f), 1.0f);
+	BaseLight light(glm::vec3(1.0f), .1f);
 
-	while(!glfwWindowShouldClose(window))
+	while (!display.should_close())
 	{
 		double current_seconds = glfwGetTime();
 		double delta_time = current_seconds - previous_seconds;
 		previous_seconds = current_seconds;
 
-		if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE))
+		if (GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_ESCAPE))
 		{
-			glfwSetWindowShouldClose(window, 1);
+			glfwSetWindowShouldClose(display.get_window(), 1);
 		}
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		//glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-
+		display.clear_color(0.0f, 0.0f, 0.0f, 0.0f);
+		display.clear();
 		scale += delta;
 		if(std::abs(scale) >= 1.0f)
 		{
@@ -140,8 +114,7 @@ int main() {
 
 		mesh->render();
 		
-		glfwPollEvents();
-		glfwSwapBuffers(window);
+		display.swap_buffers();
 	}
 
 	glfwTerminate();
