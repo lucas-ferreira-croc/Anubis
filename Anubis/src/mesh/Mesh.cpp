@@ -43,7 +43,7 @@ bool Mesh::load(const std::string& filename)
     bool ret = false;
     Assimp::Importer importer;
     
-    const aiScene* scene = importer.ReadFile(filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
+    const aiScene* scene = importer.ReadFile(filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals  | aiProcess_JoinIdenticalVertices);
 
     if (scene)
     {
@@ -79,6 +79,7 @@ bool Mesh::init_from_scene(const aiScene* scene, const std::string& filename)
 {
     m_Meshes.resize(scene->mNumMeshes);
     m_Textures.resize(scene->mNumMaterials);
+    m_Materials.resize(scene->mNumMaterials);
 
     unsigned int num_vertices = 0;
     unsigned int num_indices = 0;
@@ -180,7 +181,7 @@ bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
                 }
 
                 m_Textures[i] = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
-                if (!m_Textures[i]->load_texture()) {
+                if (!m_Textures[i]->load_textureA()) {
                     std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
                     delete m_Textures[i];
                     m_Textures[i] = nullptr;
@@ -193,6 +194,15 @@ bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
             else {
                 std::cout << "No valid diffuse texture found for material " << i << "\n";
             }
+        }
+    
+        aiColor3D ambient_color(0.0f, 0.0f, 0.0f);
+        if(material->Get(AI_MATKEY_COLOR_AMBIENT, ambient_color) == AI_SUCCESS)
+        {
+            std::cout << "loaaded material color " << ambient_color.r << " " << ambient_color.g << " " << ambient_color.b << "\n";
+            m_Materials[i].m_AmbientColor.r = ambient_color.r;
+            m_Materials[i].m_AmbientColor.g = ambient_color.g;
+            m_Materials[i].m_AmbientColor.b = ambient_color.b;
         }
     }
 

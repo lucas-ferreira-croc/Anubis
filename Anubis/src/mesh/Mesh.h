@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 
 #include "Transform.h"
+#include "Material.h"
 #include "../Texture/Texture.h"
 
 #define ARRAY_SIZE_IN_ELEMENTS(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -26,6 +27,16 @@ public:
 	void render(unsigned int num_instances, const glm::mat4& wvp_matrix, const glm::mat4& world_matrix);
 	Transform& get_transform() { return m_Transform; }
 
+	const Material& get_material()
+	{
+		for(Material m : m_Materials)
+		{
+			if(m.m_AmbientColor !=  glm::vec3(0.0f, 0.0f, 0.0f))
+			{
+				return m;
+			}
+		}
+	}
 
 private:
 	void clear();
@@ -54,6 +65,7 @@ private:
 
 	std::vector<MeshEntry> m_Meshes;
 	std::vector<Texture*> m_Textures;
+	std::vector<Material> m_Materials;
 
 	std::vector<glm::vec3> m_Positions;
 	std::vector<glm::vec3> m_Normals;

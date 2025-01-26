@@ -4,7 +4,7 @@
 #include <xutility>
 
 Camera::Camera(glm::vec3 position, glm::vec3 target)
-	: position(position), target(target), speed(5.0), yaw_speed(10.0f), cam_yaw_angle(0.0f), cam_pitch_angle(0.0f),
+	: position(position), target(target), speed(10.0f), yaw_speed(10.0f), cam_yaw_angle(0.0f), cam_pitch_angle(0.0f),
 	previous_xpos(0.0f), previous_ypos(0.0), xpos(0.0f), ypos(0.0f)
 {
 	rotation = glm::rotate(glm::mat4(1.0f), glm::radians(cam_yaw_angle), glm::vec3(0.0f, 1.0f, 0.0f));
