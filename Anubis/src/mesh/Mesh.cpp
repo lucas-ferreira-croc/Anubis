@@ -204,6 +204,15 @@ bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
             m_Materials[i].m_AmbientColor.g = ambient_color.g;
             m_Materials[i].m_AmbientColor.b = ambient_color.b;
         }
+
+        aiColor3D diffuse_color(0.0f, 0.0f, 0.0f);
+        if(material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color) == AI_SUCCESS)
+        {
+            std::cout << "lodaded diffuse color " << diffuse_color.r << " " << diffuse_color.g << " " << diffuse_color.b << "\n";
+            m_Materials[i].m_DiffuseCOlor.r = diffuse_color.r;
+            m_Materials[i].m_DiffuseCOlor.g = diffuse_color.g;
+            m_Materials[i].m_DiffuseCOlor.b = diffuse_color.b;
+        }
     }
 
     return true;

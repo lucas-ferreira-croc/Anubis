@@ -10,6 +10,8 @@ Display::Display(unsigned int window_width, unsigned int window_height)
 
 Display::~Display()
 {
+	glfwDestroyWindow(window);
+	glfwTerminate();
 }
 
 void Display::initialize_window()

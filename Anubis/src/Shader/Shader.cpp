@@ -96,15 +96,19 @@ void Shader::set_vec3_array(const std::string& name, std::vector<glm::vec3> valu
 	}
 }
 
-void Shader::set_light(const BaseLight& light)
+void Shader::set_directional_light(const DirectionalLight& light)
 {
-	set_float3("base_light.color", light.m_Color);
-	set_float("base_light.ambient_intensity", light.m_ambientIntensity);
+	set_float3("directional_light.base.color", light.m_Color);
+	set_float("directional_light.base.ambient_intensity", light.m_ambientIntensity);
+	
+	set_float3("directional_light.direction", light.get_local_direction());
+	set_float("directional_light.diffuse_intensity", light.m_DiffuseIntensity);
 }
 
 void Shader::set_material(const Material& material)
 {
 	set_float3("material.ambient_color", material.m_AmbientColor);
+	set_float3("material.diffuse_color", material.m_DiffuseCOlor);
 }
 
 int Shader::get_uniform_location(std::string name)

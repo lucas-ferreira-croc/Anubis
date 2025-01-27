@@ -16,8 +16,9 @@
 #include "texture/Texture.h"
 #include "Mesh/Mesh.h"
 #include "Shader/Shader.h"
-#include "Shader/Light/BaseLight.h"
+#include "Shader/Light/DirectionalLight.h"
 #include "Display/Display.h"
+
 int main() 
 {
 
@@ -64,7 +65,10 @@ int main()
 	const char* fs_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_shader.glsl";
 	Shader shader;
 	shader.create_from_file(vs_filename, fs_filename);
-	BaseLight light(glm::vec3(1.0f), .1f);
+	DirectionalLight light;
+	light.m_ambientIntensity = 0.1f;
+	light.m_DiffuseIntensity = 1.0f;
+	light.m_WorldDirection = glm::vec3(3.0f, 0.0f, -1.0f);
 
 	while (!display.should_close())
 	{
@@ -107,9 +111,11 @@ int main()
 		shader.set_mat4("view", camera.get_look_at());
 		shader.set_mat4("projection", projection);
 
+		light.calculate_local_direction(mesh->get_transform().get_matrix());
+
 		 // fs uniforms
 		shader.set_int("texture_sampler", 0);
-		shader.set_light(light);
+		shader.set_directional_light(light);
 		shader.set_material(mesh->get_material());
 
 		mesh->render();
@@ -117,6 +123,5 @@ int main()
 		display.swap_buffers();
 	}
 
-	glfwTerminate();
 	return 0;
 }

@@ -9,7 +9,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
-#include "Light/BaseLight.h"
+#include "Light/DirectionalLight.h"
 #include "../Mesh/Material.h"
 
 class Shader
@@ -35,7 +35,7 @@ public:
 	void set_mat4(const std::string& name, float* value);
 	void set_vec3_array(const std::string& name, std::vector<glm::vec3> values);
 	
-	void set_light(const BaseLight& light);
+	void set_directional_light(const DirectionalLight& light);
 	void set_material(const Material& material);
 	
 	int get_uniform_location(std::string name);
