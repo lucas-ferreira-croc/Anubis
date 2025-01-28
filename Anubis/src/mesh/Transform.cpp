@@ -36,3 +36,20 @@ glm::mat4 Transform::get_matrix()
 
 	return transform;
 }
+
+glm::vec3 Transform::world_position_to_local_position(glm::vec3 world_position)
+{
+	glm::mat4 cameraToLocalTranslation = glm::translate(glm::mat4(1.0f), -get_position());
+
+	glm::mat4 cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-get_rotation().z), glm::vec3(0.0f, 0.0f, 1.0f));
+	cameraToLocalRotation = glm::rotate(cameraToLocalRotation, glm::radians(-get_rotation().y), glm::vec3(0.0f, 1.0f, 0.0f));
+	cameraToLocalRotation = glm::rotate(cameraToLocalRotation, glm::radians(-get_rotation().x), glm::vec3(1.0f, 0.0f, 0.0f));
+
+	glm::mat4 ObjectToLocalTransformation = cameraToLocalRotation * cameraToLocalTranslation;
+
+	glm::vec4 ObjectWorldPos(world_position, 1.0f);
+	glm::vec4 ObjectLocalPos = ObjectToLocalTransformation * ObjectWorldPos;
+
+	return glm::vec3(ObjectLocalPos);
+}
+

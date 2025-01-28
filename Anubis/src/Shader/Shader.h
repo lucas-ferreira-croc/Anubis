@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 
 #include "Light/DirectionalLight.h"
+#include "Light/PointLight.h"
 #include "../Mesh/Material.h"
 
 class Shader
@@ -36,6 +37,7 @@ public:
 	void set_vec3_array(const std::string& name, std::vector<glm::vec3> values);
 	
 	void set_directional_light(const DirectionalLight& light);
+	void set_point_lights(std::vector<PointLight>& point_lights);
 	void set_material(const Material& material);
 	
 	int get_uniform_location(std::string name);

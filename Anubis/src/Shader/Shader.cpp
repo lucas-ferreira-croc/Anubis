@@ -100,15 +100,41 @@ void Shader::set_directional_light(const DirectionalLight& light)
 {
 	set_float3("directional_light.base.color", light.m_Color);
 	set_float("directional_light.base.ambient_intensity", light.m_ambientIntensity);
+	set_float("directional_light.base.diffuse_intensity", light.m_DiffuseIntensity);
 	
 	set_float3("directional_light.direction", light.get_local_direction());
-	set_float("directional_light.diffuse_intensity", light.m_DiffuseIntensity);
+}
+
+void Shader::set_point_lights(std::vector<PointLight>& point_lights)
+{
+	set_int("point_lights_size", point_lights.size());
+	std::stringstream ss;
+	for(int i = 0; i < point_lights.size(); i++)
+	{
+		ss << "point_lights[" << i << "]";
+		//std::string name = "point_lights[" + i + ']';
+		std::string name = ss.str();
+		// base
+		set_float3(name + ".base.color", point_lights[i].m_Color);
+		set_float(name  + ".base.ambient_intensity", point_lights[i].m_ambientIntensity);
+		set_float(name  + ".base.diffuse_intensity", point_lights[i].m_DiffuseIntensity);
+
+		// point light
+		set_float3(name + ".local_pos", point_lights[i].get_local_position());
+
+		// attenuation
+		set_float(name + ".attenuation.Constant", point_lights[i].attenuation.Constant);
+		set_float(name + ".attenuation.Linear", point_lights[i].attenuation.Linear);
+		set_float(name + ".attenuation.Exp", point_lights[i].attenuation.Exp);
+		ss.str("");
+	}
 }
 
 void Shader::set_material(const Material& material)
 {
 	set_float3("material.ambient_color", material.m_AmbientColor);
-	set_float3("material.diffuse_color", material.m_DiffuseCOlor);
+	set_float3("material.diffuse_color", material.m_DiffuseColor);
+	set_float3("material.specular_color", material.m_SpecularColor);
 }
 
 int Shader::get_uniform_location(std::string name)

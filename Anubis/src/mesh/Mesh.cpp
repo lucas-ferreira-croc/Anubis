@@ -1,6 +1,5 @@
 #include "Mesh.h"
 #include <iostream>
-#include <filesystem>
 
 
 void Mesh::clear()
@@ -65,12 +64,18 @@ void Mesh::render()
     for(unsigned int i = 0; i < m_Meshes.size(); i++)
     {
         unsigned int material_index = m_Meshes[i].material_index;
-        assert(material_index < m_Textures.size());
+        assert(material_index < m_Materials.size());
 
-        if(m_Textures[material_index])
+        if(m_Materials[material_index].m_SpecularExponent)
         {
-            m_Textures[material_index]->use(GL_TEXTURE0);
+            m_Materials[material_index].m_SpecularExponent->use(GL_TEXTURE6);
         }
+
+       if(m_Materials[material_index].m_DiffuseTexture != nullptr)
+       {
+           m_Materials[material_index].m_DiffuseTexture->use(GL_TEXTURE0);
+       }
+
         glDrawElementsBaseVertex(GL_TRIANGLES, m_Meshes[i].num_indices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m_Meshes[i].base_index), m_Meshes[i].base_vertex);
     }
 }
@@ -157,65 +162,138 @@ bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
     std::filesystem::path model_path(filename);
     std::filesystem::path directory = model_path.parent_path();
 
-    for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
+    for (unsigned int i = 0; i < scene->mNumMaterials; i++)
+    {
         const aiMaterial* material = scene->mMaterials[i];
-        m_Textures[i] = nullptr;
 
-        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-            aiString path;
-
-            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) {
-
-                std::string texture_path_str(path.C_Str()); 
-
-
-                if (texture_path_str._Starts_with("./") || texture_path_str._Starts_with(".\\")) {
-                    texture_path_str = texture_path_str.substr(2);
-                }
-
-                std::filesystem::path texture_path = directory / texture_path_str;
-
-                if (!std::filesystem::exists(texture_path)) {
-                    std::cout << "Texture file not found: " << texture_path.string() << "\n";
-                    continue; 
-                }
-
-                m_Textures[i] = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
-                if (!m_Textures[i]->load_textureA()) {
-                    std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
-                    delete m_Textures[i];
-                    m_Textures[i] = nullptr;
-                    return false;
-                }
-                else {
-                    std::cout << "Loaded texture \"" << texture_path.string() << "\"\n";
-                }
-            }
-            else {
-                std::cout << "No valid diffuse texture found for material " << i << "\n";
-            }
-        }
-    
-        aiColor3D ambient_color(0.0f, 0.0f, 0.0f);
-        if(material->Get(AI_MATKEY_COLOR_AMBIENT, ambient_color) == AI_SUCCESS)
-        {
-            std::cout << "loaaded material color " << ambient_color.r << " " << ambient_color.g << " " << ambient_color.b << "\n";
-            m_Materials[i].m_AmbientColor.r = ambient_color.r;
-            m_Materials[i].m_AmbientColor.g = ambient_color.g;
-            m_Materials[i].m_AmbientColor.b = ambient_color.b;
-        }
-
-        aiColor3D diffuse_color(0.0f, 0.0f, 0.0f);
-        if(material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color) == AI_SUCCESS)
-        {
-            std::cout << "lodaded diffuse color " << diffuse_color.r << " " << diffuse_color.g << " " << diffuse_color.b << "\n";
-            m_Materials[i].m_DiffuseCOlor.r = diffuse_color.r;
-            m_Materials[i].m_DiffuseCOlor.g = diffuse_color.g;
-            m_Materials[i].m_DiffuseCOlor.b = diffuse_color.b;
-        }
-    }
+        load_textures(directory.string(), material, i);
+        load_colors(material, i);
+    } 
 
     return true;
+}
+
+void Mesh::load_textures(const std::filesystem::path& directory, const aiMaterial* material, int index)
+{
+    load_diffuse_texture(directory, material, index);
+    load_specular_texture(directory, material, index);
+
+}
+
+void Mesh::load_diffuse_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
+{
+    m_Materials[index].m_DiffuseTexture = nullptr;
+    if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+    {
+        aiString path;
+
+        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) 
+        {
+
+            std::string texture_path_str(path.C_Str());
+
+
+            if (texture_path_str._Starts_with("./") || texture_path_str._Starts_with(".\\")) 
+            {
+                texture_path_str = texture_path_str.substr(2);
+            }
+
+            std::filesystem::path texture_path = directory / texture_path_str;
+
+            if (!std::filesystem::exists(texture_path))
+            {
+                std::cout << "Texture file not found: " << texture_path.string() << "\n";
+                return;
+            }
+
+            std::cout << "vai carregar em";
+            m_Materials[index].m_DiffuseTexture = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
+            if (!m_Materials[index].m_DiffuseTexture->load_textureA()) 
+            {
+                std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
+                delete m_Materials[index].m_DiffuseTexture;
+                m_Materials[index].m_DiffuseTexture = nullptr;
+                return;
+            }
+            else 
+            {
+                std::cout << "Loaded texture \"" << texture_path.string() << "\"\n";
+            }
+        }
+        else 
+        {
+            std::cout << "No valid diffuse texture found for material " << index << "\n";
+        }
+    }
+}
+
+void Mesh::load_specular_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
+{
+    m_Materials[index].m_SpecularExponent = nullptr;
+    if (material->GetTextureCount(aiTextureType_SHININESS) > 0) {
+        aiString path;
+
+        if (material->GetTexture(aiTextureType_SHININESS, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) {
+
+            std::string texture_path_str(path.C_Str());
+
+
+            if (texture_path_str._Starts_with("./") || texture_path_str._Starts_with(".\\")) {
+                texture_path_str = texture_path_str.substr(2);
+            }
+
+            std::filesystem::path texture_path = directory / texture_path_str;
+
+            if (!std::filesystem::exists(texture_path)) {
+                std::cout << "Texture file not found: " << texture_path.string() << "\n";
+                return;
+            }
+
+            m_Materials[index].m_SpecularExponent = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
+            if (!m_Materials[index].m_SpecularExponent->load_texture_grayscale()) {
+                std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
+                delete m_Materials[index].m_SpecularExponent;
+                m_Materials[index].m_SpecularExponent = nullptr;
+                return;
+            }
+            else {
+                std::cout << "Loaded texture \"" << texture_path.string() << "\"\n";
+            }
+        }
+        else {
+            std::cout << "No valid diffuse texture found for material " << index << "\n";
+        }
+    }
+}
+
+void Mesh::load_colors(const aiMaterial* material, int index)
+{
+    aiColor3D ambient_color(0.0f, 0.0f, 0.0f);
+    if (material->Get(AI_MATKEY_COLOR_AMBIENT, ambient_color) == AI_SUCCESS)
+    {
+        std::cout << "loaaded material color " << ambient_color.r << " " << ambient_color.g << " " << ambient_color.b << "\n";
+        m_Materials[index].m_AmbientColor.r = ambient_color.r;
+        m_Materials[index].m_AmbientColor.g = ambient_color.g;
+        m_Materials[index].m_AmbientColor.b = ambient_color.b;
+    }
+
+    aiColor3D diffuse_color(0.0f, 0.0f, 0.0f);
+    if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color) == AI_SUCCESS)
+    {
+        std::cout << "lodaded diffuse color " << diffuse_color.r << " " << diffuse_color.g << " " << diffuse_color.b << "\n";
+        m_Materials[index].m_DiffuseColor.r = diffuse_color.r;
+        m_Materials[index].m_DiffuseColor.g = diffuse_color.g;
+        m_Materials[index].m_DiffuseColor.b = diffuse_color.b;
+    }
+
+    aiColor3D specular_color(0.0f, 0.0f, 0.0f);
+    if (material->Get(AI_MATKEY_COLOR_SPECULAR, specular_color) == AI_SUCCESS)
+    {
+        std::cout << "lodaded specular color " << specular_color.r << " " << specular_color.g << " " << specular_color.b << "\n";
+        m_Materials[index].m_SpecularColor.r = specular_color.r;
+        m_Materials[index].m_SpecularColor.g = specular_color.g;
+        m_Materials[index].m_SpecularColor.b = specular_color.b;
+    }
 }
 
 

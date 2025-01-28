@@ -17,8 +17,8 @@
 #include "Mesh/Mesh.h"
 #include "Shader/Shader.h"
 #include "Shader/Light/DirectionalLight.h"
+#include "Shader/Light/PointLight.h"
 #include "Display/Display.h"
-
 int main() 
 {
 
@@ -26,8 +26,6 @@ int main()
 	int height = 1200;
 	Display display(width, height);
 	display.initialize_window();
-
-
 
 	float scale = 0.0f;
 	float delta = 0.0065f;
@@ -55,7 +53,7 @@ int main()
 	double previous_seconds = glfwGetTime();
 
 	Mesh* mesh = new Mesh();
-	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\models\\wine_barrel.obj"))
+	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\models\\antique_ceramic_vase_01_4k.obj"))
 	{
 		return 0;
 	}
@@ -69,6 +67,30 @@ int main()
 	light.m_ambientIntensity = 0.1f;
 	light.m_DiffuseIntensity = 1.0f;
 	light.m_WorldDirection = glm::vec3(3.0f, 0.0f, -1.0f);
+
+	std::vector<PointLight> point_lights;
+
+	PointLight point_light0;
+	point_light0.m_DiffuseIntensity = 1.0f;
+	point_light0.m_Color = glm::vec3(1.0f, 0.0f, 0.0f);
+	point_light0.attenuation.Linear = 0.2f;
+	point_light0.attenuation.Exp = 0.0f;
+	point_lights.push_back(point_light0);
+	point_lights[0].world_position.x = 3.0f;
+	point_lights[0].world_position.y = 0;
+	point_lights[0].world_position.z = 1.0f;
+
+	PointLight point_light1;
+	point_light1.m_DiffuseIntensity = 1.0f;
+	point_light1.m_Color = glm::vec3(0.0f, 0.0f, 1.0f);
+	point_light1.attenuation.Linear = 0.0f;
+	point_light1.attenuation.Exp = 0.2f;
+	point_lights.push_back(point_light1);
+	point_lights[1].world_position.x = -1.0f;
+	point_lights[1].world_position.y = 0.0f;
+	point_lights[1].world_position.z = 1.0f;
+
+
 
 	while (!display.should_close())
 	{
@@ -101,7 +123,7 @@ int main()
 		mesh->get_transform().set_rotation(0.0f, angle, 0.0f);
 		cube_transform.set_rotation(0.0f, angle, 0.0f);
 
-		mesh->get_transform().set_scale(0.3f);
+		//mesh->get_transform().set_scale(0.3f);
 		//cube_transform.set_scale(0.5f);
 		camera.update(delta_time);
 
@@ -115,9 +137,29 @@ int main()
 
 		 // fs uniforms
 		shader.set_int("texture_sampler", 0);
-		shader.set_directional_light(light);
-		shader.set_material(mesh->get_material());
+		shader.set_int("texture_sampler_specular", 6);
 
+		/*glm::mat4 cameraToLocalTranslation = glm::translate(glm::mat4(1.0f), -glm::vec3(mesh->get_transform().get_position()));
+		glm::mat4 cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().z), glm::vec3(0.0f, 0.0f, 1.0f));
+		cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().y), glm::vec3(0.0f, 1.0f, 0.0f));
+		cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().x), glm::vec3(1.0f, 0.0f, 0.0f));
+
+		glm::mat4 cameraToLocalTransformation = cameraToLocalRotation * cameraToLocalTranslation;
+		glm::vec4 cameraWorldlPos(camera.get_position(), 1.0f);
+		glm::vec4 cameraLocalPos = cameraToLocalTransformation * cameraWorldlPos;
+		glm::vec3 cameraLocalPos3f(cameraLocalPos);*/
+		camera.calculate_local_position(mesh->get_transform());
+		shader.set_float3("camera_local_position", camera.get_local_position());
+
+		shader.set_directional_light(light);
+
+		
+		point_lights[0].calculate_local_position(mesh->get_transform());
+		point_lights[1].calculate_local_position(mesh->get_transform());
+
+		shader.set_point_lights(point_lights);
+
+		shader.set_material(mesh->get_material());
 		mesh->render();
 		
 		display.swap_buffers();

@@ -1,26 +1,28 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <string>
 
 class Texture
 {
 public:
 	Texture();
-	Texture(GLenum textureTarget, const char* filepath);
+	Texture(GLenum textureTarget, std::string filepath);
 	~Texture();
 
 	bool load_texture();
 	bool load_textureA();
+	bool load_texture_grayscale();
 	void use(GLenum textureUnit);
 	void clear_texture();
 
-	const char* get_filepath() { return filepath; };
+	std::string get_filepath() { return filepath; };
 	
 	GLenum m_textureTarget;
 	unsigned int m_TextureObject;
 private:
 	int width, height, bit_depth;
 
-	const char* filepath;
+	std::string filepath;
 };
 

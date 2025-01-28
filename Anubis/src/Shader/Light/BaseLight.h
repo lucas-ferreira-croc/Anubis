@@ -12,5 +12,6 @@ public:
 
 	glm::vec3 m_Color;
 	float m_ambientIntensity;
+	float m_DiffuseIntensity;
 };
 

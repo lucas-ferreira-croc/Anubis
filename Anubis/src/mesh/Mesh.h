@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <filesystem>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -40,12 +41,20 @@ public:
 
 private:
 	void clear();
+	
 	bool init_from_scene(const aiScene* scene, const std::string& filename);
 	void count_vertices_and_indices(const aiScene* scene, unsigned int& num_vertices, unsigned int& num_indices);
 	void reserve_space(unsigned int num_vertices, unsigned int num_indices);
+	
 	void init_all_meshes(const aiScene* scene);
 	void init_single_mesh(const aiMesh* mesh);
+	
 	bool init_materials(const aiScene* scene, const std::string& filename);
+	void load_textures(const std::filesystem::path& directory, const aiMaterial* material, int index);
+	void load_specular_texture(const std::filesystem::path& directory, const aiMaterial* material, int index);
+	void load_diffuse_texture(const std::filesystem::path& directory, const aiMaterial* material, int index);
+	void load_colors(const aiMaterial* material, int index);
+
 	void populate_buffers();
 
 	Transform m_Transform;

@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <GLFW/glfw3.h>
+#include "../Mesh/Transform.h"
 
 class Camera
 {
@@ -20,9 +21,16 @@ public:
 		return ypos;
 	}
 
+	glm::vec3 get_position() { return position; }
+
 	static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
+
+	void calculate_local_position(Transform transform);
+	glm::vec3 get_local_position() { return m_LocalPosition; };
 private:
+	glm::vec3 m_LocalPosition;
+
 	glm::vec3 position;
 	glm::vec3 target;
 
