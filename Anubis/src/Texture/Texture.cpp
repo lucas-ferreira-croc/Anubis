@@ -14,7 +14,6 @@ Texture::Texture()
 Texture::Texture(GLenum textureTarget, std::string filepath)
 	:  width(0), height(0), bit_depth(0), filepath(filepath), m_textureTarget(textureTarget)
 {
-	std::cout << "criou com " << filepath.c_str() << "\n";
 }
 
 Texture::~Texture()

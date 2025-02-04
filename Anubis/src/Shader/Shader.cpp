@@ -130,6 +130,36 @@ void Shader::set_point_lights(std::vector<PointLight>& point_lights)
 	}
 }
 
+void Shader::set_spot_lights(std::vector<SpotLight>& spot_lights)
+{
+	set_int("spot_lights_size", spot_lights.size());
+	std::stringstream ss;
+	for (int i = 0; i < spot_lights.size(); i++)
+	{
+		ss << "spot_lights[" << i << "]";
+		//std::string name = "point_lights[" + i + ']';
+		std::string name = ss.str();
+		// base
+		set_float3(name + ".PointLightBase.base.color", spot_lights[i].m_Color);
+		set_float(name  + ".PointLightBase.base.ambient_intensity", spot_lights[i].m_ambientIntensity);
+		set_float(name  + ".PointLightBase.base.diffuse_intensity", spot_lights[i].m_DiffuseIntensity);
+
+		// point light
+		set_float3(name + ".PointLightBase.local_pos", spot_lights[i].get_local_position());
+
+		// attenuation
+		set_float(name + ".PointLightBase.attenuation.Constant", spot_lights[i].attenuation.Constant);
+		set_float(name + ".PointLightBase.attenuation.Linear", spot_lights[i].attenuation.Linear);
+		set_float(name + ".PointLightBase.attenuation.Exp", spot_lights[i].attenuation.Exp);
+
+		glm::vec3 normalized_direction = glm::normalize(spot_lights[i].get_local_direction());
+		set_float3(name + ".Direction", normalized_direction);
+		set_float(name  + ".Cutoff", spot_lights[i].cutoff);
+
+		ss.str("");
+	}
+}
+
 void Shader::set_material(const Material& material)
 {
 	set_float3("material.ambient_color", material.m_AmbientColor);

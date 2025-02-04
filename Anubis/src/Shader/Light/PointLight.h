@@ -17,7 +17,7 @@ public:
 
 	void calculate_local_position(Transform transform);
 	glm::vec3& get_local_position() { return m_LocalPosition; };
-private:
+protected:
 	glm::vec3 m_LocalPosition = glm::vec3(0.0f);
 };
 

@@ -38,6 +38,11 @@ void Camera::update(double delta_time)
     glm::vec3 right = glm::normalize(glm::cross(target, glm::vec3(0.0f, 1.0f, 0.0f))); // Direção direita
     glm::vec3 forward = glm::normalize(glm::vec3(target.x, 0.0f, target.z)); // Direção para frente (ignorar Y)
 
+    if (keys[GLFW_KEY_SPACE])
+    {
+        cycle++;
+    }
+
     if (keys[GLFW_KEY_A])
     {
         position -= right * (speed * (float)delta_time);

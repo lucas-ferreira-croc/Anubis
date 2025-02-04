@@ -6,8 +6,11 @@ const int MAX_SPOT_LIGHTS = 6;
 in vec2 tex_coords;
 in vec3 normal_;
 in vec3 local_position_;
+flat in ivec4 boneIDs_;
+in vec4 weights_;
 
 out vec4 frag_color;
+
 
 struct BaseLight
 {
@@ -51,6 +54,8 @@ struct Material
 	vec3 specular_color;
 };
 
+
+// Lighntining and material stuff
 uniform Material material;
 
 uniform DirectionalLight directional_light;
@@ -66,11 +71,16 @@ uniform vec3 camera_local_position;
 uniform sampler2D texture_sampler;
 uniform sampler2D texture_sampler_specular;
 
+// animation
+uniform int display_bone_index;
+
+
+// lightning functions
 vec4 calculate_light_internal(BaseLight base, vec3 light_direction, vec3 normal)
 {
 	vec4 ambient_color = vec4(base.color, 1.0) *
-						 base.ambient_intensity *
-						 vec4(material.ambient_color, 1.0);
+		base.ambient_intensity *
+		vec4(material.ambient_color, 1.0);
 
 	float diffuse_factor = dot(normal, -light_direction);
 
@@ -80,9 +90,9 @@ vec4 calculate_light_internal(BaseLight base, vec3 light_direction, vec3 normal)
 	if (diffuse_factor > 0)
 	{
 		diffuse_color = vec4(base.color, 1.0) *
-						base.diffuse_intensity *
-						vec4(material.diffuse_color, 1.0) *
-						diffuse_factor;
+			base.diffuse_intensity *
+			vec4(material.diffuse_color, 1.0) *
+			diffuse_factor;
 
 		vec3 pixel_to_camera = normalize(camera_local_position - local_position_);
 		vec3 light_reflect = normalize(reflect(light_direction, normal));
@@ -93,8 +103,8 @@ vec4 calculate_light_internal(BaseLight base, vec3 light_direction, vec3 normal)
 			specular_factor = pow(specular_factor, specular_exponent);
 
 			specular_color = vec4(base.color, 1.0) *
-							 vec4(material.specular_color, 1.0) *
-							 specular_factor;
+				vec4(material.specular_color, 1.0) *
+				specular_factor;
 		}
 	}
 
@@ -144,17 +154,41 @@ void main()
 	vec3 normal = normalize(normal_);
 	vec4 total_light = calculate_directional_light(normal);
 
-	for(int i = 0; i < point_lights_size; i++)
+	for (int i = 0; i < point_lights_size; i++)
 	{
 		total_light += calculate_point_light(point_lights[i], normal);
 	}
 
-	for(int i = 0; i < spot_lights_size; i++)
+	for (int i = 0; i < spot_lights_size; i++)
 	{
-		//total_light += calculate_spot_lights(spot_lights[i], normal);
 		total_light += calculate_spot_lights(spot_lights[i], normal);
 	}
 
-	//frag_color = texture2D(texture_sampler, tex_coords) * clamp((ambient_color + diffuse_color + specular_color), 0, 1);
-	frag_color = texture2D(texture_sampler, tex_coords) * total_light;
+	bool found = false;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (boneIDs_[i] == display_bone_index)
+		{
+			if(weights_[i] >= 0.7)
+			{
+				frag_color = vec4(1.0, 0.0, 0.0, 0.0) * weights_[i];
+			}
+			else if (weights_[i] >= 0.4 && weights_[i] <= 0.6)
+			{
+				frag_color = vec4(0.0, 1.0, 0.0, 0.0) * weights_[i];
+			}
+			else if (weights_[i] >= 0.1)
+			{
+				frag_color = vec4(1.0, 1.0, 0.0, 0.0) * weights_[i];
+			}
+			found = true;
+			break;
+		}
+	}
+
+	if(!found)
+	{
+		frag_color = texture2D(texture_sampler, tex_coords) * total_light * vec4(0.0001) + vec4(0.0, 0.0, 1.0, 0.0);
+	}
 }

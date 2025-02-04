@@ -11,6 +11,7 @@
 
 #include "Light/DirectionalLight.h"
 #include "Light/PointLight.h"
+#include "Light/SpotLight.h"
 #include "../Mesh/Material.h"
 
 class Shader
@@ -38,6 +39,7 @@ public:
 	
 	void set_directional_light(const DirectionalLight& light);
 	void set_point_lights(std::vector<PointLight>& point_lights);
+	void set_spot_lights(std::vector<SpotLight>& spot_lights);
 	void set_material(const Material& material);
 	
 	int get_uniform_location(std::string name);

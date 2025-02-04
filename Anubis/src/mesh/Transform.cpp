@@ -37,6 +37,15 @@ glm::mat4 Transform::get_matrix()
 	return transform;
 }
 
+glm::vec3 Transform::calculate_local_direction(glm::vec3 world_direction)
+{
+	glm::mat3 world_mat3(get_matrix());
+	glm::mat3 world_to_local = glm::transpose(world_mat3);
+
+	world_direction= world_to_local * world_direction;
+	return glm::normalize(world_direction);
+}
+
 glm::vec3 Transform::world_position_to_local_position(glm::vec3 world_position)
 {
 	glm::mat4 cameraToLocalTranslation = glm::translate(glm::mat4(1.0f), -get_position());

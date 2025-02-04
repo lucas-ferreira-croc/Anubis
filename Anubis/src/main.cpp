@@ -15,10 +15,12 @@
 #include "camera/Camera.h"
 #include "texture/Texture.h"
 #include "Mesh/Mesh.h"
+#include "Mesh/SkinnedMesh.h"
 #include "Shader/Shader.h"
 #include "Shader/Light/DirectionalLight.h"
 #include "Shader/Light/PointLight.h"
 #include "Display/Display.h"
+
 int main() 
 {
 
@@ -45,6 +47,8 @@ int main()
 	Camera camera(camera_pos, target);
 	
 	glfwSetInputMode(display.get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(display.get_window(), GLFW_STICKY_KEYS, GLFW_TRUE);
+
 	glfwSetWindowUserPointer(display.get_window(), &camera);
 	
 	glfwSetKeyCallback(display.get_window(), &Camera::key_callback);
@@ -52,8 +56,14 @@ int main()
 
 	double previous_seconds = glfwGetTime();
 
-	Mesh* mesh = new Mesh();
-	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\models\\antique_ceramic_vase_01_4k.obj"))
+	//Mesh* mesh = new Mesh();
+	/*if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\models\\antique_ceramic_vase_01_4k.obj"))
+	{
+		return 0;
+	}*/
+
+	SkinnedMesh* mesh = new SkinnedMesh();
+	if (!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\boblampclean.md5mesh"))
 	{
 		return 0;
 	}
@@ -61,8 +71,12 @@ int main()
 
 	const char* vs_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_shader.glsl";
 	const char* fs_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_shader.glsl";
+	const char* vs_skinning_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_skinning.glsl";
+	const char* fs_skinning_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_skinning.glsl";
 	Shader shader;
-	shader.create_from_file(vs_filename, fs_filename);
+	
+	//shader.create_from_file(vs_filename, fs_filename);
+	shader.create_from_file(vs_skinning_filename, fs_skinning_filename);
 	DirectionalLight light;
 	light.m_ambientIntensity = 0.1f;
 	light.m_DiffuseIntensity = 1.0f;
@@ -72,7 +86,7 @@ int main()
 
 	PointLight point_light0;
 	point_light0.m_DiffuseIntensity = 1.0f;
-	point_light0.m_Color = glm::vec3(1.0f, 0.0f, 0.0f);
+	point_light0.m_Color = glm::vec3(1.0f, 0.0f, .0f);
 	point_light0.attenuation.Linear = 0.2f;
 	point_light0.attenuation.Exp = 0.0f;
 	point_lights.push_back(point_light0);
@@ -82,7 +96,7 @@ int main()
 
 	PointLight point_light1;
 	point_light1.m_DiffuseIntensity = 1.0f;
-	point_light1.m_Color = glm::vec3(0.0f, 0.0f, 1.0f);
+	point_light1.m_Color = glm::vec3(0.0f, 1.0f, 0.0f);
 	point_light1.attenuation.Linear = 0.0f;
 	point_light1.attenuation.Exp = 0.2f;
 	point_lights.push_back(point_light1);
@@ -90,7 +104,21 @@ int main()
 	point_lights[1].world_position.y = 0.0f;
 	point_lights[1].world_position.z = 1.0f;
 
+	std::vector<SpotLight> spot_lights;
+	SpotLight spot_light0;
+	spot_light0.m_DiffuseIntensity = 10000.0f;
+	spot_light0.m_Color = glm::vec3(1.0f, 0.0f, 1.0);
+	spot_light0.attenuation.Linear = 0.1f;
+	spot_light0.cutoff = glm::cos(30.0f);
+	spot_light0.world_position = glm::vec3(0.0f, 2.0f, 0.0f);
+	spot_light0.world_direction = glm::vec3(0.0f, -1.0f, 0.0f);
+	spot_lights.push_back(spot_light0);
 
+	int bone_index = 1;
+
+	mesh->get_transform().rotate(0.0f, -90.0f, 0.0f);
+
+	bool space_pressed = false;
 
 	while (!display.should_close())
 	{
@@ -103,6 +131,17 @@ int main()
 			glfwSetWindowShouldClose(display.get_window(), 1);
 		}
 
+		if(glfwGetKey(display.get_window(), GLFW_KEY_SPACE) == GLFW_PRESS && !space_pressed)
+		{
+			bone_index = camera.cycle % mesh->num_bones();
+			shader.set_int("display_bone_index", bone_index);
+			std::cout << "Bone index = " << bone_index << "\n";
+		}
+		else if (glfwGetKey(display.get_window(), GLFW_KEY_SPACE) == GLFW_RELEASE)
+		{
+			space_pressed = 0.0f;
+		}
+
 		display.clear_color(0.0f, 0.0f, 0.0f, 0.0f);
 		display.clear();
 		scale += delta;
@@ -111,8 +150,7 @@ int main()
 			//delta *= -1.0f;
 		}
 
-		mesh->get_transform().set_position(0.0f, 0.0f, -1.0f);
-		cube_transform.set_position(0.0f, 0.0f, -1.0f);
+		mesh->get_transform().set_position(0.0f, 0.0f, 0.0f);
 
 		angle += angle_delta;
 		if(std::abs(glm::radians(angle)) >= glm::radians(90.0f))
@@ -120,11 +158,9 @@ int main()
 			//angle_delta *= -1.0f;
 		}
 
-		mesh->get_transform().set_rotation(0.0f, angle, 0.0f);
-		cube_transform.set_rotation(0.0f, angle, 0.0f);
+		//mesh->get_transform().set_rotation(0.0f, angle, 0.0f);
 
-		//mesh->get_transform().set_scale(0.3f);
-		//cube_transform.set_scale(0.5f);
+		mesh->get_transform().set_scale(0.3f);
 		camera.update(delta_time);
 
 		shader.bind();
@@ -133,21 +169,12 @@ int main()
 		shader.set_mat4("view", camera.get_look_at());
 		shader.set_mat4("projection", projection);
 
-		light.calculate_local_direction(mesh->get_transform().get_matrix());
+		light.calculate_local_direction(mesh->get_transform());
 
 		 // fs uniforms
 		shader.set_int("texture_sampler", 0);
 		shader.set_int("texture_sampler_specular", 6);
 
-		/*glm::mat4 cameraToLocalTranslation = glm::translate(glm::mat4(1.0f), -glm::vec3(mesh->get_transform().get_position()));
-		glm::mat4 cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().z), glm::vec3(0.0f, 0.0f, 1.0f));
-		cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().y), glm::vec3(0.0f, 1.0f, 0.0f));
-		cameraToLocalRotation = glm::rotate(glm::mat4(1.0f), glm::radians(mesh->get_transform().get_rotation().x), glm::vec3(1.0f, 0.0f, 0.0f));
-
-		glm::mat4 cameraToLocalTransformation = cameraToLocalRotation * cameraToLocalTranslation;
-		glm::vec4 cameraWorldlPos(camera.get_position(), 1.0f);
-		glm::vec4 cameraLocalPos = cameraToLocalTransformation * cameraWorldlPos;
-		glm::vec3 cameraLocalPos3f(cameraLocalPos);*/
 		camera.calculate_local_position(mesh->get_transform());
 		shader.set_float3("camera_local_position", camera.get_local_position());
 
@@ -159,10 +186,15 @@ int main()
 
 		shader.set_point_lights(point_lights);
 
+		spot_lights[0].calculate_local_direction_and_position(mesh->get_transform());
+		shader.set_spot_lights(spot_lights);
+
 		shader.set_material(mesh->get_material());
 		mesh->render();
 		
 		display.swap_buffers();
+
+		
 	}
 
 	return 0;

@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseLight.h"
+#include "../../Mesh/Transform.h"
 #include <glm/glm.hpp>
 
 class DirectionalLight : public BaseLight
@@ -7,7 +8,7 @@ class DirectionalLight : public BaseLight
 public:
 	glm::vec3 m_WorldDirection;
 
-	void calculate_local_direction(glm::mat4 world);
+	void calculate_local_direction(Transform transform);
 	const glm::vec3& get_local_direction() const { return m_LocalDirection; }
 
 private:

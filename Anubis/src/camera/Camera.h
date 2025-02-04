@@ -28,7 +28,12 @@ public:
 
 	void calculate_local_position(Transform transform);
 	glm::vec3 get_local_position() { return m_LocalPosition; };
+
+	glm::vec3 get_target() { return target; };
+
+	int cycle = 0;
 private:
+	bool keys[1024];
 	glm::vec3 m_LocalPosition;
 
 	glm::vec3 position;
@@ -43,7 +48,6 @@ private:
 
 	glm::mat4 view;
 
-	bool keys[1024];
 
 	double xpos;
 	double ypos;

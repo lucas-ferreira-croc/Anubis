@@ -1,33 +1,17 @@
-#include "Mesh.h"
+#include "SkinnedMesh.h"
+
 #include <iostream>
 
-
-void Mesh::clear()
+SkinnedMesh::SkinnedMesh()
 {
-    for (unsigned int i = 0; i < m_Textures.size(); i++)
-    {
-        delete(m_Textures[i]);
-    }
-
-    if (m_Buffers[0] != 0)
-    {
-        glDeleteBuffers(ARRAY_SIZE_IN_ELEMENTS(m_Buffers), m_Buffers);
-    }
-    if (m_VAO != 0)
-    {
-        glDeleteVertexArrays(1, &m_VAO);
-        m_VAO = 0;
-    }
 }
 
-
-
-Mesh::~Mesh()
+SkinnedMesh::~SkinnedMesh()
 {
-    clear();
+	clear();
 }
 
-bool Mesh::load(const std::string& filename)
+bool SkinnedMesh::load(const std::string& filename)
 {
     // release previous mesh
     clear();
@@ -41,8 +25,8 @@ bool Mesh::load(const std::string& filename)
 
     bool ret = false;
     Assimp::Importer importer;
-    
-    const aiScene* scene = importer.ReadFile(filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals  | aiProcess_JoinIdenticalVertices);
+
+    const aiScene* scene = importer.ReadFile(filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
 
     if (scene)
     {
@@ -57,39 +41,51 @@ bool Mesh::load(const std::string& filename)
     return ret;
 }
 
-void Mesh::render()
+void SkinnedMesh::render()
 {
     glBindVertexArray(m_VAO);
 
-    for(unsigned int i = 0; i < m_Meshes.size(); i++)
+    for (unsigned int i = 0; i < m_Meshes.size(); i++)
     {
         unsigned int material_index = m_Meshes[i].material_index;
         assert(material_index < m_Materials.size());
 
-        if(m_Materials[material_index].m_SpecularExponent)
+        if (m_Materials[material_index].m_SpecularExponent)
         {
             m_Materials[material_index].m_SpecularExponent->use(GL_TEXTURE6);
         }
 
-       if(m_Materials[material_index].m_DiffuseTexture != nullptr)
-       {
-           m_Materials[material_index].m_DiffuseTexture->use(GL_TEXTURE0);
-       }
+        if (m_Materials[material_index].m_DiffuseTexture != nullptr)
+        {
+            m_Materials[material_index].m_DiffuseTexture->use(GL_TEXTURE0);
+        }
 
         glDrawElementsBaseVertex(GL_TRIANGLES,
-                                 m_Meshes[i].num_indices, 
-                                 GL_UNSIGNED_INT, 
-                                 (void*)(sizeof(unsigned int) * m_Meshes[i].base_index),
-                                 m_Meshes[i].base_vertex);
+            m_Meshes[i].num_indices,
+            GL_UNSIGNED_INT,
+            (void*)(sizeof(unsigned int) * m_Meshes[i].base_index),
+            m_Meshes[i].base_vertex);
     }
 
     glBindVertexArray(0);
 }
 
-bool Mesh::init_from_scene(const aiScene* scene, const std::string& filename)
+void SkinnedMesh::clear()
+{
+    if (m_Buffers[0] != 0)
+    {
+        glDeleteBuffers(ARRAY_SIZE_IN_ELEMENTS(m_Buffers), m_Buffers);
+    }
+    if (m_VAO != 0)
+    {
+        glDeleteVertexArrays(1, &m_VAO);
+        m_VAO = 0;
+    }
+}
+
+bool SkinnedMesh::init_from_scene(const aiScene* scene, const std::string& filename)
 {
     m_Meshes.resize(scene->mNumMeshes);
-    m_Textures.resize(scene->mNumMaterials);
     m_Materials.resize(scene->mNumMaterials);
 
     unsigned int num_vertices = 0;
@@ -99,7 +95,7 @@ bool Mesh::init_from_scene(const aiScene* scene, const std::string& filename)
     reserve_space(num_vertices, num_indices);
     init_all_meshes(scene);
 
-    if(!init_materials(scene, filename))
+    if (!init_materials(scene, filename))
     {
         return false;
     }
@@ -108,9 +104,9 @@ bool Mesh::init_from_scene(const aiScene* scene, const std::string& filename)
     return true;
 }
 
-void Mesh::count_vertices_and_indices(const aiScene* scene, unsigned int& num_vertices, unsigned int& num_indices)
+void SkinnedMesh::count_vertices_and_indices(const aiScene* scene, unsigned int& num_vertices, unsigned int& num_indices)
 {
-    for(int i = 0; i < m_Meshes.size(); i++)
+    for (int i = 0; i < m_Meshes.size(); i++)
     {
         m_Meshes[i].material_index = scene->mMeshes[i]->mMaterialIndex;
         m_Meshes[i].num_indices = scene->mMeshes[i]->mNumFaces * 3;
@@ -122,28 +118,29 @@ void Mesh::count_vertices_and_indices(const aiScene* scene, unsigned int& num_ve
     }
 }
 
-void Mesh::reserve_space(unsigned int num_vertices, unsigned int num_indices)
+void SkinnedMesh::reserve_space(unsigned int num_vertices, unsigned int num_indices)
 {
     m_Positions.reserve(num_vertices);
     m_Normals.reserve(num_vertices);
     m_TexCoords.reserve(num_vertices);
     m_Indices.reserve(num_indices);
+    m_Bones.resize(num_vertices);
 }
 
-void Mesh::init_all_meshes(const aiScene* scene)
+void SkinnedMesh::init_all_meshes(const aiScene* scene)
 {
     for (unsigned int i = 0; i < m_Meshes.size(); i++)
     {
         const aiMesh* mesh = scene->mMeshes[i];
-        init_single_mesh(mesh);
+        init_single_mesh(i, mesh);
     }
 }
 
-void Mesh::init_single_mesh(const aiMesh* mesh)
+void SkinnedMesh::init_single_mesh(unsigned int mesh_index, const aiMesh* mesh)
 {
     const aiVector3D zero3D(0.0f, 0.0f, 0.0f);
 
-    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         const aiVector3D& position = mesh->mVertices[i];
         const aiVector3D& normal = mesh->mNormals[i];
@@ -154,7 +151,9 @@ void Mesh::init_single_mesh(const aiMesh* mesh)
         m_TexCoords.push_back(glm::vec2(texcoord.x, texcoord.y));
     }
 
-    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+    load_mesh_bones(mesh_index, mesh);
+
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
         const aiFace& face = mesh->mFaces[i];
         m_Indices.push_back(face.mIndices[0]);
@@ -163,7 +162,7 @@ void Mesh::init_single_mesh(const aiMesh* mesh)
     }
 }
 
-bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
+bool SkinnedMesh::init_materials(const aiScene* scene, const std::string& filename)
 {
     std::filesystem::path model_path(filename);
     std::filesystem::path directory = model_path.parent_path();
@@ -174,64 +173,18 @@ bool Mesh::init_materials(const aiScene* scene, const std::string& filename)
 
         load_textures(directory.string(), material, i);
         load_colors(material, i);
-    } 
+    }
 
     return true;
 }
 
-void Mesh::load_textures(const std::filesystem::path& directory, const aiMaterial* material, int index)
+void SkinnedMesh::load_textures(const std::filesystem::path& directory, const aiMaterial* material, int index)
 {
     load_diffuse_texture(directory, material, index);
     load_specular_texture(directory, material, index);
 }
 
-void Mesh::load_diffuse_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
-{
-    m_Materials[index].m_DiffuseTexture = nullptr;
-    if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-    {
-        aiString path;
-
-        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) 
-        {
-
-            std::string texture_path_str(path.C_Str());
-
-
-            if (texture_path_str._Starts_with("./") || texture_path_str._Starts_with(".\\")) 
-            {
-                texture_path_str = texture_path_str.substr(2);
-            }
-
-            std::filesystem::path texture_path = directory / texture_path_str;
-
-            if (!std::filesystem::exists(texture_path))
-            {
-                std::cout << "Texture file not found: " << texture_path.string() << "\n";
-                return;
-            }
-
-            m_Materials[index].m_DiffuseTexture = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
-            if (!m_Materials[index].m_DiffuseTexture->load_textureA()) 
-            {
-                std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
-                delete m_Materials[index].m_DiffuseTexture;
-                m_Materials[index].m_DiffuseTexture = nullptr;
-                return;
-            }
-            else 
-            {
-                std::cout << "Loaded texture \"" << texture_path.string() << "\"\n";
-            }
-        }
-        else 
-        {
-            std::cout << "No valid diffuse texture found for material " << index << "\n";
-        }
-    }
-}
-
-void Mesh::load_specular_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
+void SkinnedMesh::load_specular_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
 {
     m_Materials[index].m_SpecularExponent = nullptr;
     if (material->GetTextureCount(aiTextureType_SHININESS) > 0) {
@@ -270,7 +223,53 @@ void Mesh::load_specular_texture(const std::filesystem::path& directory, const a
     }
 }
 
-void Mesh::load_colors(const aiMaterial* material, int index)
+void SkinnedMesh::load_diffuse_texture(const std::filesystem::path& directory, const aiMaterial* material, int index)
+{
+    m_Materials[index].m_DiffuseTexture = nullptr;
+    if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+    {
+        aiString path;
+
+        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS)
+        {
+
+            std::string texture_path_str(path.C_Str());
+
+
+            if (texture_path_str._Starts_with("./") || texture_path_str._Starts_with(".\\"))
+            {
+                texture_path_str = texture_path_str.substr(2);
+            }
+
+            std::filesystem::path texture_path = directory / texture_path_str;
+
+            if (!std::filesystem::exists(texture_path))
+            {
+                std::cout << "Texture file not found: " << texture_path.string() << "\n";
+                return;
+            }
+
+            m_Materials[index].m_DiffuseTexture = new Texture(GL_TEXTURE_2D, texture_path.string().c_str());
+            if (!m_Materials[index].m_DiffuseTexture->load_textureA())
+            {
+                std::cout << "Error loading texture \"" << texture_path.string() << "\"\n";
+                delete m_Materials[index].m_DiffuseTexture;
+                m_Materials[index].m_DiffuseTexture = nullptr;
+                return;
+            }
+            else
+            {
+                std::cout << "Loaded texture \"" << texture_path.string() << "\"\n";
+            }
+        }
+        else
+        {
+            std::cout << "No valid diffuse texture found for material " << index << "\n";
+        }
+    }
+}
+
+void SkinnedMesh::load_colors(const aiMaterial* material, int index)
 {
     aiColor3D ambient_color(0.0f, 0.0f, 0.0f);
     if (material->Get(AI_MATKEY_COLOR_AMBIENT, ambient_color) == AI_SUCCESS)
@@ -300,8 +299,7 @@ void Mesh::load_colors(const aiMaterial* material, int index)
     }
 }
 
-
-void Mesh::populate_buffers()
+void SkinnedMesh::populate_buffers()
 {
     glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[POSITION]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(m_Positions[0]) * m_Positions.size(), &m_Positions[0], GL_STATIC_DRAW);
@@ -318,7 +316,54 @@ void Mesh::populate_buffers()
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+    glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[BONE]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(m_Bones[0]) * m_Bones.size(), &m_Bones[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(3);
+    glVertexAttribIPointer(3, MAX_NUM_BONES_PER_VERTEX, GL_INT, sizeof(VertexBoneData), (const void*)0);
+
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, MAX_NUM_BONES_PER_VERTEX, GL_FLOAT, GL_FALSE, 
+        sizeof(VertexBoneData), (const void*)(MAX_NUM_BONES_PER_VERTEX * sizeof(int32_t)));
+       
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Buffers[INDEX]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(m_Indices[0]) * m_Indices.size(), &m_Indices[0], GL_STATIC_DRAW);
+}
 
+void SkinnedMesh::load_mesh_bones(unsigned int mesh_index, const aiMesh* mesh)
+{
+    for(unsigned int i = 0; i < mesh->mNumBones; i++)
+    {
+        load_single_bone(mesh_index, mesh->mBones[i]);
+    }
+}
+
+void SkinnedMesh::load_single_bone(unsigned int mesh_index, const aiBone* bone)
+{
+    int bone_id = get_bone_id(bone);
+
+    for (unsigned int i = 0; i < bone->mNumWeights; i++)
+    {
+        const aiVertexWeight& vw = bone->mWeights[i];
+        unsigned int global_vertex_id = m_Meshes[mesh_index].base_vertex + bone->mWeights[i].mVertexId;
+        m_Bones[global_vertex_id].add_bone_data(bone_id, vw.mWeight);
+    }
+}
+
+int SkinnedMesh::get_bone_id(const aiBone* bone)
+{
+    int bone_index = 0;
+    std::string bone_name(bone->mName.C_Str());
+
+    if(m_BoneNameToIndexMap.find(bone_name) == m_BoneNameToIndexMap.end())
+    {
+        bone_index = (int)m_BoneNameToIndexMap.size();
+        m_BoneNameToIndexMap[bone_name] = bone_index;
+    }
+    else
+    {
+        bone_index = m_BoneNameToIndexMap[bone_name];
+    }
+
+    return bone_index;
 }
