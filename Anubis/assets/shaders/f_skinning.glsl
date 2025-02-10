@@ -82,7 +82,7 @@ vec4 calculate_light_internal(BaseLight base, vec3 light_direction, vec3 normal)
 		base.ambient_intensity *
 		vec4(material.ambient_color, 1.0);
 
-	float diffuse_factor = dot(normal, -light_direction);
+	float diffuse_factor = dot(normal, light_direction);
 
 	vec4 diffuse_color = vec4(0.0, 0.0, 0.0, 0.0);
 	vec4 specular_color = vec4(0.0, 0.0, 0.0, 0.0);
@@ -166,29 +166,6 @@ void main()
 
 	bool found = false;
 
-	for (int i = 0; i < 4; i++)
-	{
-		if (boneIDs_[i] == display_bone_index)
-		{
-			if(weights_[i] >= 0.7)
-			{
-				frag_color = vec4(1.0, 0.0, 0.0, 0.0) * weights_[i];
-			}
-			else if (weights_[i] >= 0.4 && weights_[i] <= 0.6)
-			{
-				frag_color = vec4(0.0, 1.0, 0.0, 0.0) * weights_[i];
-			}
-			else if (weights_[i] >= 0.1)
-			{
-				frag_color = vec4(1.0, 1.0, 0.0, 0.0) * weights_[i];
-			}
-			found = true;
-			break;
-		}
-	}
-
-	if(!found)
-	{
-		frag_color = texture2D(texture_sampler, tex_coords) * total_light * vec4(0.0001) + vec4(0.0, 0.0, 1.0, 0.0);
-	}
+	
+	frag_color = texture(texture_sampler, tex_coords) * total_light;
 }

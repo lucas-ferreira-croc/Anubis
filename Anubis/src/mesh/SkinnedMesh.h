@@ -9,11 +9,14 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include <glm/glm.hpp>
+
 
 #include "Transform.h"
 #include "Material.h"
 
 #define ARRAY_SIZE_IN_ELEMENTS(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 
 class SkinnedMesh
 {
@@ -41,6 +44,8 @@ public:
 			}
 		}
 	}
+
+	void get_bone_transformations(float time_in_seconds, std::vector<glm::mat4>& transforms);
 
 private:
 	#define MAX_NUM_BONES_PER_VERTEX 4
@@ -91,6 +96,17 @@ private:
 	void load_mesh_bones(unsigned int mesh_index, const aiMesh* mesh);
 	void load_single_bone(unsigned int mesh_index, const aiBone* bone);
 	int get_bone_id(const aiBone* bone);
+	void read_node_heirarchy(float animation_time_ticks, const aiNode* node, const glm::mat4& parent_transform);
+	
+	const aiNodeAnim* find_node_anim(const aiAnimation* animation, const std::string node_name);
+	void calculate_interpolated_scaling(aiVector3D& scaling, float animation_time_ticks, const aiNodeAnim* node_anim);
+	void calculate_interpolated_rotation(aiQuaternion& rotation, float animation_time_ticks, const aiNodeAnim* node_anim);
+	void calculate_interpolated_position(aiVector3D& position, float animation_time_ticks, const aiNodeAnim* node_anim);
+
+	unsigned int find_scaling(float animation_time_ticks, const aiNodeAnim* node_anim);
+	unsigned int find_rotation(float animation_time_ticks, const aiNodeAnim* node_anim);
+	unsigned int find_translation(float animation_time_ticks, const aiNodeAnim* node_anim);
+	
 
 #define INVALID_MATERIAL 0xFFFFFFFF
 
@@ -121,6 +137,11 @@ private:
 		unsigned int material_index;
 	};
 
+
+	Assimp::Importer importer;
+	const aiScene* scene = NULL;
+	glm::mat4 m_GlobalInverseTransform;
+
 	std::vector<MeshEntry> m_Meshes;
 	std::vector<Material> m_Materials;
 
@@ -132,5 +153,19 @@ private:
 	std::vector<VertexBoneData> m_Bones;
 
 	std::map<std::string, unsigned int> m_BoneNameToIndexMap;
+
+	struct BoneInfo
+	{
+		glm::mat4 offset_matrix;
+		glm::mat4 final_transformation;
+
+		BoneInfo(const glm::mat4& offset)
+		{
+			offset_matrix = offset;
+			final_transformation = glm::mat4(0.0f);
+		}
+	};
+	
+	std::vector<BoneInfo> m_BoneInfo;
 };
 

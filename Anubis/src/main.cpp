@@ -1,7 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-
+#include <sstream>
+#include <Windows.h>
+#include <sysinfoapi.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -20,6 +22,8 @@
 #include "Shader/Light/DirectionalLight.h"
 #include "Shader/Light/PointLight.h"
 #include "Display/Display.h"
+
+long long startTimeMilis = 0;
 
 int main() 
 {
@@ -78,15 +82,17 @@ int main()
 	//shader.create_from_file(vs_filename, fs_filename);
 	shader.create_from_file(vs_skinning_filename, fs_skinning_filename);
 	DirectionalLight light;
-	light.m_ambientIntensity = 0.1f;
+	light.m_Color = glm::vec3(1.0f);
+	light.m_ambientIntensity = 1.0f;
 	light.m_DiffuseIntensity = 1.0f;
 	light.m_WorldDirection = glm::vec3(3.0f, 0.0f, -1.0f);
 
 	std::vector<PointLight> point_lights;
 
 	PointLight point_light0;
+	point_light0.m_ambientIntensity = 1.0f;
 	point_light0.m_DiffuseIntensity = 1.0f;
-	point_light0.m_Color = glm::vec3(1.0f, 0.0f, .0f);
+	point_light0.m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
 	point_light0.attenuation.Linear = 0.2f;
 	point_light0.attenuation.Exp = 0.0f;
 	point_lights.push_back(point_light0);
@@ -95,6 +101,7 @@ int main()
 	point_lights[0].world_position.z = 1.0f;
 
 	PointLight point_light1;
+	point_light1.m_ambientIntensity = 1.0f;
 	point_light1.m_DiffuseIntensity = 1.0f;
 	point_light1.m_Color = glm::vec3(0.0f, 1.0f, 0.0f);
 	point_light1.attenuation.Linear = 0.0f;
@@ -106,6 +113,7 @@ int main()
 
 	std::vector<SpotLight> spot_lights;
 	SpotLight spot_light0;
+	spot_light0.m_ambientIntensity = 1.0f;
 	spot_light0.m_DiffuseIntensity = 10000.0f;
 	spot_light0.m_Color = glm::vec3(1.0f, 0.0f, 1.0);
 	spot_light0.attenuation.Linear = 0.1f;
@@ -116,9 +124,10 @@ int main()
 
 	int bone_index = 1;
 
-	mesh->get_transform().rotate(0.0f, -90.0f, 0.0f);
-
 	bool space_pressed = false;
+	std::stringstream ss;
+
+	startTimeMilis = GetTickCount();
 
 	while (!display.should_close())
 	{
@@ -190,6 +199,23 @@ int main()
 		shader.set_spot_lights(spot_lights);
 
 		shader.set_material(mesh->get_material());
+
+
+		long long currentTimeMilis = GetTickCount();
+		float animationTimeSec = ((float)(currentTimeMilis - startTimeMilis)) / 1000.0f;
+
+		std::vector<glm::mat4> bones_transformations;
+		mesh->get_bone_transformations(animationTimeSec, bones_transformations);
+		//mesh->get_bone_transformations(bones_transformations);
+		
+		for(int i = 0; i < bones_transformations.size(); i++)
+		{
+			ss << "bones[" << i << "]";
+			std::string name = ss.str();
+			shader.set_mat4(name, bones_transformations[i]);
+			ss.str("");
+		}
+		
 		mesh->render();
 		
 		display.swap_buffers();

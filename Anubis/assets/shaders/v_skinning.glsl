@@ -16,9 +16,20 @@ uniform mat4 model;
 uniform mat4 projection;
 uniform mat4 view;
 
+const int MAX_BONES = 100;
+uniform mat4 bones[MAX_BONES];
+
 void main()
 {
-	gl_Position = projection * view * model * vec4(position, 1.0);
+	mat4 bone_transform = bones[boneIDs[0]] * Weights[0];
+	bone_transform     += bones[boneIDs[1]] * Weights[1];
+	bone_transform     += bones[boneIDs[2]] * Weights[2];
+	bone_transform     += bones[boneIDs[3]] * Weights[3];
+
+	vec4 pos_local = bone_transform * vec4(position, 1.0);
+
+	//gl_Position = projection * view * model * vec4(position, 1.0);
+	gl_Position = projection * view * model * pos_local;
 	tex_coords = texture_coordinates;
 	normal_ = normal;
 	local_position_ = position;

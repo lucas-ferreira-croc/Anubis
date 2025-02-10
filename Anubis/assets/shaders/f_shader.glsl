@@ -156,5 +156,5 @@ void main()
 	}
 
 	//frag_color = texture2D(texture_sampler, tex_coords) * clamp((ambient_color + diffuse_color + specular_color), 0, 1);
-	frag_color = texture2D(texture_sampler, tex_coords) * total_light;
+	frag_color = texture(texture_sampler, tex_coords) * total_light;
 }

@@ -42,6 +42,7 @@ public:
 	void set_spot_lights(std::vector<SpotLight>& spot_lights);
 	void set_material(const Material& material);
 	
+
 	int get_uniform_location(std::string name);
 
 	bool reload_shader();
