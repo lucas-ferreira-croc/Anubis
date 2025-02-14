@@ -60,7 +60,7 @@ void Display::initialize_window()
 	glFrontFace(GL_CW);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glViewport(0, 0, buffer_width, buffer_height);
 	glfwSetWindowUserPointer(window, this);

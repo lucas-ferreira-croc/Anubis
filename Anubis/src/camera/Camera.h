@@ -31,7 +31,6 @@ public:
 
 	glm::vec3 get_target() { return target; };
 
-	int cycle = 0;
 private:
 	bool keys[1024];
 	glm::vec3 m_LocalPosition;
@@ -54,5 +53,7 @@ private:
 
 	double previous_xpos;
 	double previous_ypos;
+
+	bool dislodge_mouse;
 };
 

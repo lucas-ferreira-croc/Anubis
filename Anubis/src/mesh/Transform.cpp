@@ -17,6 +17,11 @@ void Transform::set_position(float x, float y, float z)
 	m_position = glm::vec3(x, y, z);
 }
 
+void Transform::set_position(glm::vec3 position)
+{
+	m_position = position;
+}
+
 void Transform::rotate(float x, float y, float z)
 {
 	m_rotation.x += x;

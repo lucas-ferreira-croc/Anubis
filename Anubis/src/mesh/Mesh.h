@@ -25,7 +25,8 @@ public:
 	bool load(const std::string& filename);
 	
 	void render();
-	void render(unsigned int num_instances, const glm::mat4& wvp_matrix, const glm::mat4& world_matrix);
+	void render(unsigned int draw_index, unsigned int primID);
+	
 	Transform& get_transform() { return m_Transform; }
 
 	const Material& get_material()
@@ -39,6 +40,12 @@ public:
 		}
 	}
 
+	std::vector<glm::vec3> get_positions() { return m_Positions; }
+
+	bool rayIntersectsTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir,
+		const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, float& t);
+
+	bool raycast(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& hitPoint);
 private:
 	void clear();
 	

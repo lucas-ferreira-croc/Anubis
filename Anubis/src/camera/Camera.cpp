@@ -2,6 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <xutility>
+#include <iostream>
 
 Camera::Camera(glm::vec3 position, glm::vec3 target)
 	: position(position), target(target), speed(5.0f), yaw_speed(10.0f), cam_yaw_angle(0.0f), cam_pitch_angle(0.0f),
@@ -11,6 +12,8 @@ Camera::Camera(glm::vec3 position, glm::vec3 target)
 
 	std::fill(std::begin(keys), std::end(keys), false);
 	calculate_look_at();
+
+    dislodge_mouse = true;
 }
 
 void Camera::calculate_look_at()
@@ -38,10 +41,6 @@ void Camera::update(double delta_time)
     glm::vec3 right = glm::normalize(glm::cross(target, glm::vec3(0.0f, 1.0f, 0.0f))); // Direção direita
     glm::vec3 forward = glm::normalize(glm::vec3(target.x, 0.0f, target.z)); // Direção para frente (ignorar Y)
 
-    if (keys[GLFW_KEY_SPACE])
-    {
-        cycle++;
-    }
 
     if (keys[GLFW_KEY_A])
     {
@@ -85,28 +84,32 @@ void Camera::update(double delta_time)
         cam_moved = true;
     }
 
-    if (previous_xpos == 0.0 && previous_ypos == 0.0)
-    {
-        previous_xpos = xpos;
-        previous_ypos = ypos;
-    }
 
-    float sensitivity = 0.1f;
-    double x_displacement = xpos - previous_xpos;
-    if (abs(x_displacement) > 0.0)
+    if(!dislodge_mouse)
     {
-        cam_yaw_angle -= x_displacement * sensitivity;
-        previous_xpos = xpos;
-        cam_moved = true;
-    }
+        if (previous_xpos == 0.0 && previous_ypos == 0.0)
+        {
+            previous_xpos = xpos;
+            previous_ypos = ypos;
+        }
 
-    double y_displacement = ypos - previous_ypos;
-    if (abs(y_displacement) > 0.0)
-    {
-        cam_pitch_angle -= y_displacement * sensitivity;
-        cam_pitch_angle = glm::clamp(cam_pitch_angle, -89.0f, 89.0f);
-        previous_ypos = ypos;
-        cam_moved = true;
+        float sensitivity = 0.1f;
+        double x_displacement = xpos - previous_xpos;
+        if (abs(x_displacement) > 0.0)
+        {
+            cam_yaw_angle -= x_displacement * sensitivity;
+            previous_xpos = xpos;
+            cam_moved = true;
+        }
+
+        double y_displacement = ypos - previous_ypos;
+        if (abs(y_displacement) > 0.0)
+        {
+            cam_pitch_angle -= y_displacement * sensitivity;
+            cam_pitch_angle = glm::clamp(cam_pitch_angle, -89.0f, 89.0f);
+            previous_ypos = ypos;
+            cam_moved = true;
+        }
     }
 
     if (cam_moved)
@@ -134,7 +137,7 @@ void Camera::cursor_position_callback(GLFWwindow* window, double xpos, double yp
 {
 	Camera* this_camera = static_cast<Camera*>(glfwGetWindowUserPointer(window));
 	this_camera->xpos = xpos;
-	this_camera->ypos = ypos;
+    this_camera->ypos = ypos;
 }
 
 void Camera::calculate_local_position(Transform transform)

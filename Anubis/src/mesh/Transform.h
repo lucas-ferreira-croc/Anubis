@@ -13,6 +13,7 @@ public:
 	glm::vec3 get_rotation() { return m_rotation; }
 
 	void set_position(float x, float y, float z);
+	void set_position(glm::vec3 position);
 	glm::vec3 get_position() {
 		return m_position;
 	}

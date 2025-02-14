@@ -1,5 +1,79 @@
 #include "Mesh.h"
+#include <fstream>
 #include <iostream>
+
+
+bool Mesh::rayIntersectsTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, float& t)
+{
+    const float EPSILON = 0.0000001f;
+    glm::vec3 edge1 = v1 - v0;
+    glm::vec3 edge2 = v2 - v0;
+
+    glm::vec3 h = glm::cross(rayDir, edge2);
+    float a = glm::dot(edge1, h);
+
+    if (a > -EPSILON && a < EPSILON)
+        return false;
+
+    float f = 1.0f / a;
+    glm::vec3 s = rayOrigin - v0;
+    float u = f * glm::dot(s, h);
+
+    if (u < 0.0f || u > 1.0f)
+        return false;
+
+    glm::vec3 q = glm::cross(s, edge1);
+    float v = f * glm::dot(rayDir, q);
+
+    if (v < 0.0f || u + v > 1.0f)
+        return false;
+
+    t = f * glm::dot(edge2, q);
+
+    return t > EPSILON;
+}
+
+bool Mesh::raycast(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& hitPoint)
+{
+    float closestT = FLT_MAX;
+    bool hit = false;
+
+    for (size_t i = 0; i < m_Indices.size(); i += 3)
+    {
+        std::ofstream s("C:\\croc\\Anubis\\Positions.txt");
+        glm::vec3 v0 = m_Positions[m_Indices[i]];
+        glm::vec3 v1 = m_Positions[m_Indices[i + 1]];
+        glm::vec3 v2 = m_Positions[m_Indices[i + 2]];
+       
+        float t;
+        if (rayIntersectsTriangle(rayOrigin, rayDirection, v0, v1, v2, t))
+        {
+            if (t < closestT)
+            {
+                closestT = t;
+                hitPoint = rayOrigin + t * rayDirection;
+                hit = true;
+
+             
+            }
+        }
+
+        s << "vertice " << i
+            << "; v0.x = " << v0.x <<
+            "- v0.y = " << v0.y <<
+            "- v0.z = " << v0.z <<
+            "; v1.x = " << v1.x <<
+            "- v1.y = " << v1.y <<
+            "- v1.z = " << v1.z <<
+            "; v2.x = " << v2.x <<
+            "- v2.y = " << v2.y <<
+            "- v2.z = " << v2.z << "\n";
+
+    }
+
+    return hit;
+}
+
 
 
 void Mesh::clear()
@@ -82,6 +156,31 @@ void Mesh::render()
                                  (void*)(sizeof(unsigned int) * m_Meshes[i].base_index),
                                  m_Meshes[i].base_vertex);
     }
+
+    glBindVertexArray(0);
+}
+
+void Mesh::render(unsigned int draw_index, unsigned int primID)
+{
+    glBindVertexArray(m_VAO);
+    unsigned int material_index = m_Meshes[draw_index].material_index;
+    assert(material_index < m_Materials.size());
+    
+    if (m_Materials[material_index].m_SpecularExponent)
+    {
+        m_Materials[material_index].m_SpecularExponent->use(GL_TEXTURE6);
+    }
+
+    if (m_Materials[material_index].m_DiffuseTexture != nullptr)
+    {
+        m_Materials[material_index].m_DiffuseTexture->use(GL_TEXTURE0);
+    }
+
+    glDrawElementsBaseVertex(GL_TRIANGLES,
+        3,
+        GL_UNSIGNED_INT,
+        (void*)(sizeof(unsigned int) * (m_Meshes[draw_index].base_index + primID * 3)),
+        m_Meshes[draw_index].base_vertex);
 
     glBindVertexArray(0);
 }
