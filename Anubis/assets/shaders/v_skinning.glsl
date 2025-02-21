@@ -11,10 +11,12 @@ out vec3 normal_;
 out vec3 local_position_;
 flat out ivec4 boneIDs_;
 out vec4 weights_;
+out vec4 light_space_pos; //shadow mapping
 
 uniform mat4 model;
 uniform mat4 projection;
 uniform mat4 view;
+uniform mat4 light_wvp; //shadow mapping
 
 const int MAX_BONES = 100;
 uniform mat4 bones[MAX_BONES];
@@ -35,4 +37,6 @@ void main()
 	local_position_ = position;
 	boneIDs_ = boneIDs;
 	weights_ = Weights;
+
+	light_space_pos = light_wvp * vec4(Position, 1.0); //shadow mapping
 }

@@ -2,80 +2,6 @@
 #include <fstream>
 #include <iostream>
 
-
-bool Mesh::rayIntersectsTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, float& t)
-{
-    const float EPSILON = 0.0000001f;
-    glm::vec3 edge1 = v1 - v0;
-    glm::vec3 edge2 = v2 - v0;
-
-    glm::vec3 h = glm::cross(rayDir, edge2);
-    float a = glm::dot(edge1, h);
-
-    if (a > -EPSILON && a < EPSILON)
-        return false;
-
-    float f = 1.0f / a;
-    glm::vec3 s = rayOrigin - v0;
-    float u = f * glm::dot(s, h);
-
-    if (u < 0.0f || u > 1.0f)
-        return false;
-
-    glm::vec3 q = glm::cross(s, edge1);
-    float v = f * glm::dot(rayDir, q);
-
-    if (v < 0.0f || u + v > 1.0f)
-        return false;
-
-    t = f * glm::dot(edge2, q);
-
-    return t > EPSILON;
-}
-
-bool Mesh::raycast(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, glm::vec3& hitPoint)
-{
-    float closestT = FLT_MAX;
-    bool hit = false;
-
-    for (size_t i = 0; i < m_Indices.size(); i += 3)
-    {
-        std::ofstream s("C:\\croc\\Anubis\\Positions.txt");
-        glm::vec3 v0 = m_Positions[m_Indices[i]];
-        glm::vec3 v1 = m_Positions[m_Indices[i + 1]];
-        glm::vec3 v2 = m_Positions[m_Indices[i + 2]];
-       
-        float t;
-        if (rayIntersectsTriangle(rayOrigin, rayDirection, v0, v1, v2, t))
-        {
-            if (t < closestT)
-            {
-                closestT = t;
-                hitPoint = rayOrigin + t * rayDirection;
-                hit = true;
-
-             
-            }
-        }
-
-        s << "vertice " << i
-            << "; v0.x = " << v0.x <<
-            "- v0.y = " << v0.y <<
-            "- v0.z = " << v0.z <<
-            "; v1.x = " << v1.x <<
-            "- v1.y = " << v1.y <<
-            "- v1.z = " << v1.z <<
-            "; v2.x = " << v2.x <<
-            "- v2.y = " << v2.y <<
-            "- v2.z = " << v2.z << "\n";
-
-    }
-
-    return hit;
-}
-
-
-
 void Mesh::clear()
 {
     for (unsigned int i = 0; i < m_Textures.size(); i++)
@@ -127,6 +53,10 @@ bool Mesh::load(const std::string& filename)
         std::cout << "error parsing " << filename << " " << importer.GetErrorString() << "\n";
     }
 
+    CollisionVertices box_collision_vertices;
+    get_bounding_box(box_collision_vertices);
+    m_BoxCollision = new BoxCollision(box_collision_vertices);
+
     glBindVertexArray(0);
     return ret;
 }
@@ -157,6 +87,7 @@ void Mesh::render()
                                  m_Meshes[i].base_vertex);
     }
 
+    get_min_max();
     glBindVertexArray(0);
 }
 

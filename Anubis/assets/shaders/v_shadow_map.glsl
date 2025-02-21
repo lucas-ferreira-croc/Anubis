@@ -6,6 +6,5 @@ uniform mat4 wvp;
 
 void main()
 {
-    gl_Position = wvp * vec4(Position, 1.0);
-    
+	gl_Position = wvp * vec4(Position, 1.0);
 }

@@ -6,6 +6,7 @@ const int MAX_SPOT_LIGHTS = 6;
 in vec2 tex_coords;
 in vec3 normal_;
 in vec3 local_position_;
+in vec4 light_space_pos; //shadow mapping
 
 out vec4 frag_color;
 
@@ -64,10 +65,11 @@ uniform SpotLight spot_lights[MAX_SPOT_LIGHTS];
 uniform vec3 camera_local_position;
 
 uniform sampler2D texture_sampler;
+uniform sampler2D shadow_map;
 uniform sampler2D texture_sampler_specular;
 
-bool use_toon = true;
-bool rim_light = true;
+bool use_toon = false;
+bool rim_light = false;
 const int toon_color_levels = 2;
 const float toon_scale_factor = 1.0f / toon_color_levels;
 const float rim_light_power = 4.0;
@@ -166,6 +168,23 @@ vec4 calculate_spot_lights(SpotLight spot_light, vec3 normal)
 
 }
 
+float calc_shadow_factor() 
+{
+	vec3 proj_coords = light_space_pos.xyz / light_space_pos.w;
+	vec2 UV_coords;
+	UV_coords.x = 0.5 * proj_coords.x + 0.5;
+	UV_coords.y = 0.5 * proj_coords.y + 0.5;
+	float z = 0.5 * proj_coords.z + 0.5;
+	float depth = texture(shadow_map, UV_coords).x;
+
+	float bias = 0.0025;
+
+	if (depth + bias < z)
+		return 0.5;
+	else
+		return 1.0;
+
+}
 
 void main()
 {

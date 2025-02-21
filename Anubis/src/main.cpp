@@ -23,9 +23,13 @@
 #include "Shader/Light/DirectionalLight.h"
 #include "Shader/Light/PointLight.h"
 #include "Display/Display.h"
+#include "Shader/Shadow/ShadowMapFBO.h"
+
+bool gravity = false;
 
 long long startTimeMilis = 0;
-
+const int WIDTH = 1600;
+const int HEIGHT = 1200;
 
 std::function<void(int, int, int)> mouseButtonLambda;
 std::function<void(double, double)> onMouseMoveLambda;
@@ -63,12 +67,62 @@ static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 }
 
 
+ShadowMapFBO* shadow_map_fbo = new ShadowMapFBO();
+Shader* shader_shadow = new Shader();
+Mesh* mesh;
+Mesh* another_mesh;
+
+glm::mat4 light_pers_proj_matrix = glm::perspective(glm::radians(90.0f), (float)WIDTH / (float)HEIGHT, .1f, 100.0f);
+
+void shadow_pass(SpotLight& spot_light)
+{
+	shadow_map_fbo->bind_for_writing();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	
+	shader_shadow->bind();
+	
+	glm::mat4 world = mesh->get_transform().get_matrix();
+	
+	glm::mat4 light_view;
+	glm::vec3 up(0.0f, 1.0f, 0.0f);
+	
+	light_view = glm::lookAt(spot_light.world_position, spot_light.world_direction, up);
+	
+	glm::mat4 wvp = light_pers_proj_matrix * light_view * world;
+	shader_shadow->set_mat4("wvp", wvp);
+	
+	mesh->render();
+}
+
+double previous_seconds;
+int frame_count;
+
+void _update_fps_counter(GLFWwindow* window)
+{
+	double current_seconds;
+	double elapsed_seconds;
+
+	current_seconds = glfwGetTime();
+	elapsed_seconds = current_seconds - previous_seconds;
+
+	if (elapsed_seconds > 0.25)
+	{
+		previous_seconds = current_seconds;
+		char tmp[128];
+		double fps = (double)frame_count / elapsed_seconds;
+		sprintf_s(tmp, "Anubis @ fps: %.2f", fps);
+
+		glfwSetWindowTitle(window, tmp);
+		frame_count = 0;
+	}
+	frame_count++;
+}
+
 int main() 
 {
 
-	int width = 1600;
-	int height = 1200;
-	Display display(width, height);
+	
+	Display display(WIDTH, HEIGHT);
 	display.initialize_window();
 
 	float scale = 0.0f;
@@ -80,10 +134,10 @@ int main()
 
 	//glEnable(GL_CULL_FACE);
 
-	glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)width / (float)height, .1f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)WIDTH / (float)HEIGHT, .1f, 100.0f);
 
 	Transform cube_transform;
-	glm::vec3 camera_pos = glm::vec3(0.0f, 0.0, 0.0f);
+	glm::vec3 camera_pos = glm::vec3(0.0f, 2.0, 15.0f);
 	glm::vec3 target = glm::vec3(0.0f, 0.0f, -1.0f);
 
 	Camera camera(camera_pos, target);
@@ -100,8 +154,14 @@ int main()
 
 	double previous_seconds = glfwGetTime();
 
-	Mesh* mesh = new Mesh();
+	mesh = new Mesh();
 	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\dragon.obj"))
+	{
+		return 0;
+	}
+
+	another_mesh = new Mesh();
+	if (!another_mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\buddha.obj"))
 	{
 		return 0;
 	}
@@ -119,22 +179,21 @@ int main()
 	const char* vs_skinning_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_skinning.glsl";
 	const char* fs_skinning_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_skinning.glsl";
 
-	const char* vs_picking_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_picking.glsl";
-	const char* fs_picking_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_picking.glsl";
+	const char* vs_shadow_map_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_shadow_map.glsl";
+	const char* fs_shadow_map_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_empy.glsl";
 
 	const char* vs_simple_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\v_simple.glsl";
 	const char* fs_simple_filename = "C:\\croc\\Anubis\\Anubis\\assets\\shaders\\f_simple.glsl";
 
 
+
 	Shader shader;
-	Shader picking_shader;
-	Shader simple_color_shader;
+	Shader shader_simple;
 
 	shader.create_from_file(vs_filename, fs_filename);
-	picking_shader.create_from_file(vs_picking_filename, fs_picking_filename);
-	simple_color_shader.create_from_file(vs_simple_filename, fs_simple_filename);
+	shader_shadow->create_from_file(vs_shadow_map_filename, fs_shadow_map_filename);
+	shader_simple.create_from_file(vs_simple_filename, fs_simple_filename);
 
-	//shader.create_from_file(vs_skinning_filename, fs_skinning_filename);
 	DirectionalLight light;
 	light.m_Color = glm::vec3(1.0f);
 	light.m_ambientIntensity = .1f;
@@ -178,7 +237,7 @@ int main()
 
 	startTimeMilis = GetTickCount();
 
-	mesh->get_transform().set_rotation(0, 90, 0);
+	//mesh->get_transform().set_rotation(0, -270, 0);
 	
 	PickingTexture picking_texture;
 	picking_texture.init(display.get_buffer_width(), display.get_buffer_height());
@@ -216,24 +275,26 @@ int main()
 
 				if (distance < epsilon) {
 					isDragging = true;
+					
 					dragOffset = mesh->get_transform().get_position() - world_p;
+					
 					break;
 				}
 			}
 		}
 		else {
+
 			isDragging = false;
 		}
 	};
 
 	glm::vec3 target_pos = mesh->get_transform().get_position();
+	glm::vec3 another_target_pos = another_mesh->get_transform().get_position();
 
 	onMouseMoveLambda = [&](double x_pos, double y_pos) {
-		std::cout << "entrou em";
 		if (!isDragging) return;
 
-		std::cout << "ta dragando em\n";
-
+		gravity = false;
 		float mouse_x = (float)x_pos;
 		float mouse_y = (float)y_pos;
 
@@ -257,10 +318,19 @@ int main()
 		mesh->get_transform().set_position(target_pos);
 	};
 
-
 	while (!display.should_close())
 	{
+		_update_fps_counter(display.get_window());
+
+		shadow_pass(spot_lights[0]);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, display.get_buffer_width(), display.get_buffer_height());
+
+		display.clear_color(0.0f, 0.0f, 0.0f, 0.0f);
+		display.clear();
+
 		mesh->get_transform().set_position(mesh->get_transform().get_position().x, mesh->get_transform().get_position().y, -1.0f);
+		another_mesh->get_transform().set_position(another_mesh->get_transform().get_position().x, another_mesh->get_transform().get_position().y, -1.0f);
 
 		double current_seconds = glfwGetTime();
 		double delta_time = current_seconds - previous_seconds;
@@ -272,8 +342,6 @@ int main()
 		}
 
 
-		display.clear_color(0.0f, 0.0f, 0.0f, 0.0f);
-		display.clear();
 		scale += delta;
 		if(std::abs(scale) >= 1.0f)
 		{
@@ -306,15 +374,19 @@ int main()
 		camera.update(delta_time);
 
 		shader.bind();
+
+		shadow_map_fbo->bind_for_reading(GL_TEXTURE1);
+
 		//vs uniforms
-		//shader.set_mat4("model", mesh->get_transform().get_matrix());
-		shader.set_mat4("view", camera.get_look_at());
-		shader.set_mat4("projection", projection);
+		glm::mat4 wvp(1.0f);
+		wvp = projection * camera.get_look_at() * mesh->get_transform().get_matrix();
+		shader.set_mat4("wvp", wvp);
 
 		light.calculate_local_direction(mesh->get_transform());
 
 		// fs uniforms
 		shader.set_int("texture_sampler", 0);
+		shader.set_int("shadow_map", 1);
 		shader.set_int("texture_sampler_specular", 6);
 
 		camera.calculate_local_position(mesh->get_transform());
@@ -337,97 +409,71 @@ int main()
 		long long currentTimeMilis = GetTickCount();
 		float animationTimeSec = ((float)(currentTimeMilis - startTimeMilis)) / 1000.0f;
 
-	
-		//glm::vec3 rayDir(1.0f);
-		//if (m_LeftMouseButton.isPressed)
-		//{
-		//	glm::mat4 inverseProjection = glm::inverse(projection);
-
-		//	float mouse_x = (float)m_LeftMouseButton.x;
-		//	float mouse_y = (float)m_LeftMouseButton.y;
-
-		//	float ndc_x = (2.0f * mouse_x) / display.get_buffer_width() - 1.0f;
-		//	float ndc_y = 1.0f - (2.0f * mouse_y) / display.get_buffer_height();
-
-		//	glm::vec4 ndc_4d(ndc_x, ndc_y, 1.0f, 1.0f);
-		//	glm::vec4 ray_view_4d = glm::inverse(projection) * ndc_4d;
-		//	ray_view_4d.z = -1.0f; // Direção para frente na câmera
-		//	ray_view_4d.w = 0.0f;  // Direção, não posição
-
-
-		//	glm::vec4 objectViewSpacePos = camera.get_look_at() * glm::vec4(mesh->get_transform().get_position(), 1.0f);
-
-		//	glm::vec4 view_space_intersect = glm::vec4(ray_view_4d * objectViewSpacePos.z);
-
-		//	glm::vec3 ray_direction = glm::normalize(glm::vec3(glm::inverse(camera.get_look_at()) * ray_view_4d));
-		//	glm::vec3 ray_origin = camera.get_position(); 
-
-		//	float epsilon = 0.05f; // Ajuste dependendo da precisão necessária
-
-		//	for (const glm::vec3& p : mesh->get_positions()) // Pegando os vértices do mesh
-		//	{
-		//		glm::vec3 world_p = mesh->get_transform().get_matrix() * glm::vec4(p, 1.0f); // Convertendo vértice para world space
-		//		glm::vec3 diff = ray_origin - world_p;
-		//		float distance = glm::length(glm::cross(diff, ray_direction)) / glm::length(ray_direction);
-
-		//		if (distance < epsilon)
-		//		{
-		//			isDragging = true;
-		//			dragOffset = mesh->get_transform().get_position() - world_p;
-		//			std::cout << "Hit no ponto: " << world_p.x << ", " << world_p.y << ", " << world_p.z << std::endl;
-		//			std::cout << "ray_direction: " << ray_direction.x << ", " << ray_direction.y << ", " << ray_direction.z << std::endl;
-		//			break;
-		//		}
-		//	}
-
-
-		//}
-
-		//glm::vec3 targetPos = mesh->get_transform().get_position();
-		//if (isDragging)
-		//{
-		//	float mouse_x = (float)m_LeftMouseButton.x;
-		//	float mouse_y = (float)m_LeftMouseButton.y;
-
-		//	float ndc_x = (2.0f * mouse_x) / display.get_buffer_width() - 1.0f;
-		//	float ndc_y = 1.0f - (2.0f * mouse_y) / display.get_buffer_height();
-
-		//	glm::vec4 ndc_4d(ndc_x, ndc_y, -1.0f, 1.0f);
-		//	glm::vec4 ray_view_4d = glm::inverse(projection) * ndc_4d;
-		//	ray_view_4d.w = 0.0f;
-		//	glm::vec3 ray_direction = glm::normalize(glm::vec3(ray_view_4d));
-
-		//	glm::vec3 ray_origin = camera.get_position();
-		//	glm::mat4 invView = glm::inverse(camera.get_look_at());
-		//	ray_direction = glm::normalize(glm::vec3(invView * glm::vec4(ray_direction, 0.0f)));
-
-		//	// **Aqui está a diferença**: Mantemos o Z fixo do objeto original
-		//	float meshZ = mesh->get_transform().get_position().z;
-		//	float t = (meshZ - ray_origin.z) / ray_direction.z;
-		//	targetPos = ray_origin + t * ray_direction;
-		//	targetPos = glm::vec3(targetPos.x, targetPos.y, meshZ) + dragOffset;
-		//	
-		//	// **Mantemos Z original e aplicamos o offset**
-		//}
-		//mesh->get_transform().set_position(targetPos);
-
-		//// 3. Parar o dragging quando o botão do mouse for solto
-		//if (!m_LeftMouseButton.isPressed)
-		//{
-		//	isDragging = false;
-		//}
-
-		shader.set_mat4("model", mesh->get_transform().get_matrix());
-
-	/*	std::cout << "positions x = " << mesh->get_transform().get_position().x
-			<< " y = " << mesh->get_transform().get_position().y
-			<< " z =" << mesh->get_transform().get_position().z << "\n";*/
-
 		mesh->render();
+
+		mesh->m_BoxCollision->get_transform().set_position(mesh->get_transform().get_position());
+		
+		mesh->m_BoxCollision->updatePositions(mesh->get_transform().get_matrix());
+		int is_colliding = mesh->m_BoxCollision->check_collision(*another_mesh->m_BoxCollision) ? 1 : 0;
+		//std::cout << is_colliding << "\n";
+
+		shader_simple.bind();
+		shader_simple.set_mat4("wvp", wvp);
+		shader_simple.set_int("is_colliding", is_colliding);
+		
+		if(GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_C))
+			mesh->m_BoxCollision->render();
+
+
+		//another mesh
+		wvp = glm::mat4(1.0f);
+		wvp = projection * camera.get_look_at() * another_mesh->get_transform().get_matrix();
+		shader.bind();
+		shader.set_mat4("wvp", wvp);
+
+
+		light.calculate_local_direction(mesh->get_transform());
+
+
+		camera.calculate_local_position(another_mesh->get_transform());
+		shader.set_float3("camera_local_position", camera.get_local_position());
+		shader.set_directional_light(light);
+
+		point_lights[0].calculate_local_position(another_mesh->get_transform());
+		point_lights[1].calculate_local_position(another_mesh->get_transform());
+
+		shader.set_point_lights(point_lights);
+
+		spot_lights[0].calculate_local_direction_and_position(another_mesh->get_transform());
+		shader.set_spot_lights(spot_lights);
+
+		shader.set_material(another_mesh->get_material());
+		another_mesh->render();
+
+		shader_simple.bind();
+		another_mesh->m_BoxCollision->get_transform().set_position(another_mesh->get_transform().get_position());
+		another_mesh->m_BoxCollision->updatePositions(another_mesh->get_transform().get_matrix());
+		is_colliding = another_mesh->m_BoxCollision->check_collision(*mesh->m_BoxCollision) ? 1 : 0;
+		shader_simple.set_int("is_colliding", is_colliding);
+		shader_simple.set_mat4("wvp", wvp);
+		if (GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_C))
+			another_mesh->m_BoxCollision->render();
+
+
+
+		if(GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_G))
+		{
+			gravity = !gravity;
+		}
+
+		if(gravity)
+		{
+			glm::vec3 current_position = mesh->get_transform().get_position();
+			current_position.y -= 9.81 * 0.016;
+			mesh->get_transform().set_position(current_position);
+		}
 		
 		display.swap_buffers();
-
-		
 	}
 
 	return 0;
