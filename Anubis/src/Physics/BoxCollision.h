@@ -27,6 +27,7 @@ public:
 	Transform& get_transform() { return m_Transform; }
 
 	bool check_collision(BoxCollision& b_Box);
+	glm::vec3 get_mtv(BoxCollision& b_Box);
 
 	bool m_IsColliding;
 	CollisionVertices m_Vertices;

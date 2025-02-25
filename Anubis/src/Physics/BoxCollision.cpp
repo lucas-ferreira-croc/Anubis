@@ -49,10 +49,6 @@ void BoxCollision::updatePositions(glm::mat4 wvp)
 {
 	glm::mat4 transform = wvp;
 	
-	/*m_Vertices.min = glm::vec4(m_Vertices.min, 1.0f) * wvp;
-	m_Vertices.max = glm::vec4(m_Vertices.max, 1.0f) * wvp;
-	*/
-	
 	m_Vertices.min = wvp * glm::vec4(m_Vertices.min, 1.0f);
 	m_Vertices.max  = wvp * glm::vec4(m_Vertices.max, 1.0f);
 
@@ -67,11 +63,40 @@ void BoxCollision::render()
 bool BoxCollision::check_collision(BoxCollision& b_Box)
 {
 	m_IsColliding = (m_Vertices.min.x <= b_Box.m_Vertices.max.x && m_Vertices.max.x >= b_Box.m_Vertices.min.x) &&
-		(m_Vertices.min.y <= b_Box.m_Vertices.max.y && m_Vertices.max.y >= b_Box.m_Vertices.min.y) &&
-		(m_Vertices.min.z <= b_Box.m_Vertices.max.z && m_Vertices.max.z >= b_Box.m_Vertices.min.z);
+					(m_Vertices.min.y <= b_Box.m_Vertices.max.y && m_Vertices.max.y >= b_Box.m_Vertices.min.y) &&
+					(m_Vertices.min.z <= b_Box.m_Vertices.max.z && m_Vertices.max.z >= b_Box.m_Vertices.min.z);
 
-	//std::cout << "Collision Detected: " << (m_IsColliding ? "Yes" : "No") << "\n";
+	//std::cout << "Collision Detected: " << (m_IsColliding ? "Yes" : "No") << "\n"; 
 
 	b_Box.m_IsColliding = m_IsColliding;
 	return m_IsColliding;
+}
+
+glm::vec3 BoxCollision::get_mtv(BoxCollision& b_Box)
+{
+	glm::vec3 overlap;
+
+	overlap.x = std::min(m_Vertices.max.x, b_Box.m_Vertices.max.x) - std::max(m_Vertices.min.x, b_Box.m_Vertices.min.x);
+	overlap.y = std::min(m_Vertices.max.y, b_Box.m_Vertices.max.y) - std::max(m_Vertices.min.y, b_Box.m_Vertices.min.y);
+	overlap.z = std::min(m_Vertices.max.z, b_Box.m_Vertices.max.z) - std::max(m_Vertices.min.z, b_Box.m_Vertices.min.z);
+
+	float direction;
+	float epsilon = 0.01f;
+	if(overlap.x < overlap.y && overlap.x < overlap.z)
+	{	
+		direction = (m_Vertices.max.x > b_Box.m_Vertices.max.x ? overlap.x : -overlap.x);
+		direction += epsilon;
+		return glm::vec3(direction, 0.0f, 0.0f);
+	}
+	else if (overlap.y < overlap.z)
+	{
+		direction = (m_Vertices.max.y > b_Box.m_Vertices.max.y ? overlap.y : -overlap.y);
+		direction += epsilon;
+		return glm::vec3(0.0f, direction, 0.0f);
+	}
+	else {
+		direction = (m_Vertices.max.z > b_Box.m_Vertices.max.z ? overlap.z : -overlap.z);
+		direction += epsilon;
+		return glm::vec3(0.0f, 0.0f, direction);
+	}
 }

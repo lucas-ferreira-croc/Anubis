@@ -20,8 +20,6 @@ void Mesh::clear()
     }
 }
 
-
-
 Mesh::~Mesh()
 {
     clear();
@@ -56,6 +54,7 @@ bool Mesh::load(const std::string& filename)
     CollisionVertices box_collision_vertices;
     get_bounding_box(box_collision_vertices);
     m_BoxCollision = new BoxCollision(box_collision_vertices);
+    std::cout << "criou box collision\n";
 
     glBindVertexArray(0);
     return ret;

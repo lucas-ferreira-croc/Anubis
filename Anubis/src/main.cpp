@@ -34,6 +34,13 @@ const int HEIGHT = 1200;
 std::function<void(int, int, int)> mouseButtonLambda;
 std::function<void(double, double)> onMouseMoveLambda;
 
+struct MeshManager
+{
+	std::vector<std::shared_ptr<Mesh>> meshes;
+};
+
+MeshManager meshManager;
+
 struct
 {
 	bool isPressed = false;
@@ -69,14 +76,12 @@ static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 
 ShadowMapFBO* shadow_map_fbo = new ShadowMapFBO();
 Shader* shader_shadow = new Shader();
-Mesh* mesh;
-Mesh* another_mesh;
 
 glm::mat4 light_pers_proj_matrix = glm::perspective(glm::radians(90.0f), (float)WIDTH / (float)HEIGHT, .1f, 100.0f);
 
 void shadow_pass(SpotLight& spot_light)
 {
-	shadow_map_fbo->bind_for_writing();
+	/*shadow_map_fbo->bind_for_writing();
 	glClear(GL_DEPTH_BUFFER_BIT);
 	
 	shader_shadow->bind();
@@ -91,7 +96,7 @@ void shadow_pass(SpotLight& spot_light)
 	glm::mat4 wvp = light_pers_proj_matrix * light_view * world;
 	shader_shadow->set_mat4("wvp", wvp);
 	
-	mesh->render();
+	mesh->render();*/
 }
 
 double previous_seconds;
@@ -154,17 +159,13 @@ int main()
 
 	double previous_seconds = glfwGetTime();
 
-	mesh = new Mesh();
-	if(!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\dragon.obj"))
-	{
-		return 0;
-	}
+	meshManager.meshes.push_back(std::make_shared<Mesh>());
+	meshManager.meshes[0]->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\dragon.obj");
+	meshManager.meshes[0]->tag = "dragon";
 
-	another_mesh = new Mesh();
-	if (!another_mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\buddha.obj"))
-	{
-		return 0;
-	}
+	meshManager.meshes.push_back(std::make_shared<Mesh>());
+	meshManager.meshes[1]->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\buddha.obj");
+	meshManager.meshes[1]->tag = "buddha";
 
 	//SkinnedMesh* mesh = new SkinnedMesh();
 	//if (!mesh->load("C:\\croc\\Anubis\\Anubis\\assets\\Content\\boblampclean.md5mesh"))
@@ -247,6 +248,7 @@ int main()
 	bool isDragging = false;
 	glm::vec3 dragOffset;
 
+
 	mouseButtonLambda = [&](int button, int action, int mods) {
 		if(m_LeftMouseButton.isPressed)
 		{
@@ -268,17 +270,21 @@ int main()
 
 			float epsilon = 0.05f;
 
-			for (const glm::vec3& p : mesh->get_positions()) {
-				glm::vec3 world_p = mesh->get_transform().get_matrix() * glm::vec4(p, 1.0f);
-				glm::vec3 diff = ray_origin - world_p;
-				float distance = glm::length(glm::cross(diff, ray_direction)) / glm::length(ray_direction);
+			for(auto& mesh : meshManager.meshes)
+			{
+				for(const glm::vec3& p : mesh->get_positions())
+				{
+					glm::vec3 world_p = mesh->get_transform().get_matrix() * glm::vec4(p, 1.0f);
+					glm::vec3 diff = ray_origin - world_p;
+					float distance = glm::length(glm::cross(diff, ray_direction)) / glm::length(ray_direction);
 
-				if (distance < epsilon) {
-					isDragging = true;
-					
-					dragOffset = mesh->get_transform().get_position() - world_p;
-					
-					break;
+					if (distance < epsilon) {
+						isDragging = true;
+
+						dragOffset = mesh->get_transform().get_position() - world_p;
+
+						break;
+					}
 				}
 			}
 		}
@@ -288,8 +294,8 @@ int main()
 		}
 	};
 
-	glm::vec3 target_pos = mesh->get_transform().get_position();
-	glm::vec3 another_target_pos = another_mesh->get_transform().get_position();
+	glm::vec3 target_pos = meshManager.meshes[0]->get_transform().get_position();
+	glm::vec3 another_target_pos = meshManager.meshes[1]->get_transform().get_position();
 
 	onMouseMoveLambda = [&](double x_pos, double y_pos) {
 		if (!isDragging) return;
@@ -310,12 +316,12 @@ int main()
 		glm::mat4 invView = glm::inverse(camera.get_look_at());
 		ray_direction = glm::normalize(glm::vec3(invView * glm::vec4(ray_direction, 0.0f)));
 
-		float meshZ = mesh->get_transform().get_position().z;
+		float meshZ = meshManager.meshes[0]->get_transform().get_position().z;
 		float t = (meshZ - ray_origin.z) / ray_direction.z;
 		target_pos = ray_origin + t * ray_direction;
 		target_pos = glm::vec3(target_pos.x, target_pos.y, meshZ) + dragOffset;
 
-		mesh->get_transform().set_position(target_pos);
+		meshManager.meshes[0]->get_transform().set_position(target_pos);
 	};
 
 	while (!display.should_close())
@@ -329,9 +335,6 @@ int main()
 		display.clear_color(0.0f, 0.0f, 0.0f, 0.0f);
 		display.clear();
 
-		mesh->get_transform().set_position(mesh->get_transform().get_position().x, mesh->get_transform().get_position().y, -1.0f);
-		another_mesh->get_transform().set_position(another_mesh->get_transform().get_position().x, another_mesh->get_transform().get_position().y, -1.0f);
-
 		double current_seconds = glfwGetTime();
 		double delta_time = current_seconds - previous_seconds;
 		previous_seconds = current_seconds;
@@ -339,20 +342,6 @@ int main()
 		if (GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_ESCAPE))
 		{
 			glfwSetWindowShouldClose(display.get_window(), 1);
-		}
-
-
-		scale += delta;
-		if(std::abs(scale) >= 1.0f)
-		{
-			//delta *= -1.0f;
-		}
-
-
-		angle += angle_delta;
-		if(std::abs(glm::radians(angle)) >= glm::radians(90.0f))
-		{
-			//angle_delta *= -1.0f;
 		}
 
 		//mesh->get_transform().set_rotation(0.0f, angle, 0.0f);
@@ -373,105 +362,90 @@ int main()
 		//mesh->get_transform().set_scale(0.03f);
 		camera.update(delta_time);
 
-		shader.bind();
-
-		shadow_map_fbo->bind_for_reading(GL_TEXTURE1);
-
-		//vs uniforms
 		glm::mat4 wvp(1.0f);
-		wvp = projection * camera.get_look_at() * mesh->get_transform().get_matrix();
-		shader.set_mat4("wvp", wvp);
 
-		light.calculate_local_direction(mesh->get_transform());
-
-		// fs uniforms
-		shader.set_int("texture_sampler", 0);
-		shader.set_int("shadow_map", 1);
-		shader.set_int("texture_sampler_specular", 6);
-
-		camera.calculate_local_position(mesh->get_transform());
-		shader.set_float3("camera_local_position", camera.get_local_position());
-
-		shader.set_directional_light(light);
-
-
-		point_lights[0].calculate_local_position(mesh->get_transform());
-		point_lights[1].calculate_local_position(mesh->get_transform());
-
-		shader.set_point_lights(point_lights);
-
-		spot_lights[0].calculate_local_direction_and_position(mesh->get_transform());
-		shader.set_spot_lights(spot_lights);
-
-		shader.set_material(mesh->get_material());
-
-
-		long long currentTimeMilis = GetTickCount();
-		float animationTimeSec = ((float)(currentTimeMilis - startTimeMilis)) / 1000.0f;
-
-		mesh->render();
-
-		mesh->m_BoxCollision->get_transform().set_position(mesh->get_transform().get_position());
-		
-		mesh->m_BoxCollision->updatePositions(mesh->get_transform().get_matrix());
-		int is_colliding = mesh->m_BoxCollision->check_collision(*another_mesh->m_BoxCollision) ? 1 : 0;
-		//std::cout << is_colliding << "\n";
-
-		shader_simple.bind();
-		shader_simple.set_mat4("wvp", wvp);
-		shader_simple.set_int("is_colliding", is_colliding);
-		
-		if(GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_C))
-			mesh->m_BoxCollision->render();
-
-
-		//another mesh
-		wvp = glm::mat4(1.0f);
-		wvp = projection * camera.get_look_at() * another_mesh->get_transform().get_matrix();
-		shader.bind();
-		shader.set_mat4("wvp", wvp);
-
-
-		light.calculate_local_direction(mesh->get_transform());
-
-
-		camera.calculate_local_position(another_mesh->get_transform());
-		shader.set_float3("camera_local_position", camera.get_local_position());
-		shader.set_directional_light(light);
-
-		point_lights[0].calculate_local_position(another_mesh->get_transform());
-		point_lights[1].calculate_local_position(another_mesh->get_transform());
-
-		shader.set_point_lights(point_lights);
-
-		spot_lights[0].calculate_local_direction_and_position(another_mesh->get_transform());
-		shader.set_spot_lights(spot_lights);
-
-		shader.set_material(another_mesh->get_material());
-		another_mesh->render();
-
-		shader_simple.bind();
-		another_mesh->m_BoxCollision->get_transform().set_position(another_mesh->get_transform().get_position());
-		another_mesh->m_BoxCollision->updatePositions(another_mesh->get_transform().get_matrix());
-		is_colliding = another_mesh->m_BoxCollision->check_collision(*mesh->m_BoxCollision) ? 1 : 0;
-		shader_simple.set_int("is_colliding", is_colliding);
-		shader_simple.set_mat4("wvp", wvp);
-		if (GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_C))
-			another_mesh->m_BoxCollision->render();
-
-
-
-		if(GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_G))
+		for(auto& mesh : meshManager.meshes)
 		{
-			gravity = !gravity;
+			mesh->get_transform().set_position(mesh->get_transform().get_position().x, mesh->get_transform().get_position().y, -1.0f);
+
+			shader.bind();
+			shadow_map_fbo->bind_for_reading(GL_TEXTURE1);
+			
+			wvp = projection * camera.get_look_at() * mesh->get_transform().get_matrix();
+			shader.set_mat4("wvp", wvp);
+
+			light.calculate_local_direction(mesh->get_transform());
+
+			// fs uniforms
+			shader.set_int("texture_sampler", 0);
+			shader.set_int("shadow_map", 1);
+			shader.set_int("texture_sampler_specular", 6);
+
+			camera.calculate_local_position(mesh->get_transform());
+			shader.set_float3("camera_local_position", camera.get_local_position());
+
+			shader.set_directional_light(light);
+
+
+			point_lights[0].calculate_local_position(mesh->get_transform());
+			point_lights[1].calculate_local_position(mesh->get_transform());
+
+			shader.set_point_lights(point_lights);
+
+			spot_lights[0].calculate_local_direction_and_position(mesh->get_transform());
+			shader.set_spot_lights(spot_lights);
+
+			shader.set_material(mesh->get_material());
+
+
+			long long currentTimeMilis = GetTickCount();
+			float animationTimeSec = ((float)(currentTimeMilis - startTimeMilis)) / 1000.0f;
+
+			mesh->render();
+
+			mesh->m_BoxCollision->get_transform().set_position(mesh->get_transform().get_position());
+
+			mesh->m_BoxCollision->updatePositions(mesh->get_transform().get_matrix());
+
+
+			if(GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_G))
+			{
+				gravity = !gravity;
+			}
+			
+			if(gravity)
+			{
+				glm::vec3 current_position = mesh->get_transform().get_position();
+				current_position.y -= 9.81 * 0.016;
+				mesh->get_transform().set_position(current_position);
+			}
+			
+			int colliding_index = mesh->tag == "dragon" ? 1 : 0;
+			int is_colliding = mesh->m_BoxCollision->check_collision(*meshManager.meshes[colliding_index]->m_BoxCollision) ? 1 : 0;
+			//std::cout << is_colliding << "\n";
+
+
+			shader_simple.bind();
+			shader_simple.set_mat4("wvp", wvp);
+			shader_simple.set_int("is_colliding", is_colliding);
+
+			if (GLFW_PRESS == glfwGetKey(display.get_window(), GLFW_KEY_C))
+			{
+				mesh->m_BoxCollision->render();
+			}
+
+			if (is_colliding)
+			{
+				glm::vec3 mtv = mesh->m_BoxCollision->get_mtv(*meshManager.meshes[colliding_index]->m_BoxCollision);
+
+				glm::vec3 current_pos = mesh->get_transform().get_position();
+				current_pos += mtv;
+
+				mesh->get_transform().set_position(current_pos);
+			}
 		}
 
-		if(gravity)
-		{
-			glm::vec3 current_position = mesh->get_transform().get_position();
-			current_position.y -= 9.81 * 0.016;
-			mesh->get_transform().set_position(current_position);
-		}
+
 		
 		display.swap_buffers();
 	}

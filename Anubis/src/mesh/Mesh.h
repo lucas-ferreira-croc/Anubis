@@ -152,6 +152,7 @@ public:
 		vertices.max = glm::vec4(max, 1.0f) * m_Transform.get_matrix();
 	}
 
+	std::string tag;
 	BoxCollision* m_BoxCollision;
 private:
 	void clear();
